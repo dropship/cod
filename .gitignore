@@ -1,0 +1,5 @@
+.DS_Store
+config.h
+tags
+.build
+.holder
