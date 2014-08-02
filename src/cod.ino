@@ -21,6 +21,7 @@
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
 
 #define NEOPIXEL_PIN 6
+#define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(
   ADAFRUIT_CC3000_CS,
@@ -44,39 +45,46 @@ socklen_t fromlen = 8;
 char rx_packet_buffer[256];
 unsigned long recvDataLen;
 
-#define CONTROL_LED 0
-#define KICK_LED    1
-#define WOBBLE_LED  2
-#define SNARE_LED   3
-#define SIREN_LED   4
 
-int current_event = CONTROL_LED;
+// Structures for event name lookup
+#define CONTROL     0
+#define KICK        1
+#define SNARE       2
+#define WOBBLE      3
+#define SIREN       4
+
+char* event_names[5];
+uint32_t led_values[5];
+
 
 unsigned long previousMillis = millis();
 long interval = 10; // Refresh every 10ms.
 
+// Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(30, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
-
-uint32_t led_values[5];
-uint32_t black = strip.Color(255, 0, 0);
 
 void setup(void) {
   Serial.begin(115200);
   Serial.println(F("Hello, CC3000!"));
   setupNetworking();
-
-  led_values[CONTROL_LED] = strip.Color(255, 255, 255);
-
-  led_values[KICK_LED]    = strip.Color(255, 0, 0);
-  led_values[SNARE_LED]   = strip.Color(0, 255, 0);
-
-  led_values[WOBBLE_LED]  = strip.Color(0, 0, 255);
-  led_values[SIREN_LED]   = strip.Color(255, 0, 255);
-
   Serial.print("Hello!");
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
+
+
+  // Setup event lookup structures
+  event_names[CONTROL] = "nop";
+  event_names[KICK]    = "kick";
+  event_names[SNARE]   = "snare";
+  event_names[WOBBLE]  = "wobble";
+  event_names[SIREN]   = "siren";
+
+  led_values[CONTROL] = strip.Color(255, 255, 255); // White
+  led_values[KICK]    = strip.Color(255, 0, 0); // Red
+  led_values[SNARE]   = strip.Color(0, 255, 0); // Green
+  led_values[WOBBLE]  = strip.Color(0, 0, 255); // Blue
+  led_values[SIREN]   = strip.Color(255, 0, 255); // Purple
 }
 
 void loop(void) {
@@ -126,7 +134,7 @@ void parse_events(char* packet) {
 void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
   /*char* sequence    = strtok_r(message, ",", &message);*/
-  char* event       = strtok_r(message, ",", &message);
+  char* event_name  = strtok_r(message, ",", &message);
   char* event_value = strtok_r(message, ",", &message);
   char* drop_state  = strtok_r(message, ",", &message);
   char* build       = strtok_r(message, ",", &message);
@@ -134,18 +142,22 @@ void parse_message(char* message) {
   char* rcrank      = strtok_r(message, ",", &message);
 
   Serial.print(F("  event:"));
-  Serial.println(event);
+  Serial.println(event_name);
 
-  handle_event(event, "bass-wobble-vol", WOBBLE_LED);
-  handle_event(event, "hit-kick",   KICK_LED);
-  handle_event(event, "hit-snare",  SNARE_LED);
-  handle_event(event, "siren",  SIREN_LED);
+  handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
 
-void handle_event(char* event, char* event_name, int event_id) {
-  if (strcmp(event, event_name) == 0) {
-    uint32_t color = led_values[event_id];
-    setAllColor(color);
+void handle_event(char* event_name, char* event_value, char* drop_state,
+                  char* build, char* lcrank, char* rcrank) {
+  if (strcmp(event_name, "nop") == 0) {
+  }
+  else {
+    for (int i = 0; i < NELEMS(event_names); i++) {
+      if (strcmp(event_names[i], event_name) == 0) {
+        uint32_t color = led_values[i];
+        setAllColor(color);
+      }
+    }
   }
 }
 
