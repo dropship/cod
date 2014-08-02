@@ -66,9 +66,10 @@ unsigned long previousMillis = millis();
 long interval = 10; // Refresh every 10ms.
 
 // Initialize neopixel
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(30, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
+uint32_t red   = strip.Color(255, 0, 0);
 
 void setup(void) {
   Serial.begin(115200);
@@ -87,17 +88,16 @@ void setup(void) {
   event_names[WOBBLE]  = "wobble";
   event_names[SIREN]   = "siren";
 
-  led_values[CONTROL] = strip.Color(255, 255, 255); // White
-  led_values[KICK]    = strip.Color(255, 0, 0); // Red
-  led_values[SNARE]   = strip.Color(0, 255, 0); // Green
-  led_values[WOBBLE]  = strip.Color(0, 0, 255); // Blue
+  led_values[CONTROL] = white;
+  led_values[KICK]    = strip.Color(255, 0, 255); // Purple
+  led_values[SNARE]   = strip.Color(255, 255, 102); // Yellow
+  led_values[WOBBLE]  = red;
   led_values[SIREN]   = strip.Color(255, 0, 255); // Purple
 }
 
 int loop_count = 0;
 void loop(void) {
   int rcvlen, i = 0;
-  uint8_t r, g, b;
   uint32_t color;
   unsigned long currentMillis = millis();
 
@@ -105,21 +105,9 @@ void loop(void) {
     previousMillis = currentMillis;
     loop_count++;
 
-    if (loop_count % 50 == 0) {
-      Serial.print("current_drop_state: ");
-      Serial.println(current_drop_state);
-    }
-
     // Different drop-state animation loops
     if (current_drop_state == DROP) {
-      color = strip.getPixelColor(i);
-      if (loop_count % 5 == 0) {
-        if (color == white) {
-          setAllColor(black);
-        } else {
-          setAllColor(white);
-        }
-      }
+      //
     }
     else if (current_drop_state == AMBIENT ||
              current_drop_state == BUILD ||
@@ -127,15 +115,7 @@ void loop(void) {
       // Fade out all valuess
       for (i=0;i<strip.numPixels();i++) {
         color = strip.getPixelColor(i);
-        r = color >> 16;
-        g = color >> 8;
-        b = color;
-
-        r *= 0.90;
-        g *= 0.90;
-        b *= 0.90;
-
-        strip.setPixelColor(i, r, g, b);
+        strip.setPixelColor(i, fade_color(color, 0.9));
       }
     }
     strip.show();
@@ -147,6 +127,28 @@ void loop(void) {
     parse_events(rx_packet_buffer);
     memset(rx_packet_buffer, 0, 256);
   }
+}
+
+uint32_t fade_color(uint32_t color, float fade) {
+  uint8_t r, g, b;
+
+  r = (color >> 16);
+  g = (color >> 8);
+  b = color;
+
+  r *= fade;
+  g *= fade;
+  b *= fade;
+
+  return strip.Color(r, g, b);
+}
+
+// Fill the dots one after the other with a color
+void setAllColor(uint32_t c) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+  }
+  strip.show();
 }
 
 void parse_events(char* packet) {
@@ -165,6 +167,10 @@ void parse_events(char* packet) {
 void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
   /*char* sequence    = strtok_r(message, ",", &message);*/
+
+  Serial.print(F("  event:"));
+  Serial.println(message);
+
   char* event_name  = strtok_r(message, ",", &message);
   float event_value = atof(strtok_r(message, ",", &message));
   int   drop_state  = atoi(strtok_r(message, ",", &message));
@@ -172,10 +178,10 @@ void parse_message(char* message) {
   float lcrank      = atof(strtok_r(message, ",", &message));
   float rcrank      = atof(strtok_r(message, ",", &message));
 
-  Serial.print(F("  event:"));
-  Serial.print(event_name);
+  /*Serial.print(" : ");
+  Serial.print(drop_state);
   Serial.print(" : ");
-  Serial.println(drop_state);
+  Serial.println(event_value);*/
 
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
@@ -191,7 +197,15 @@ void handle_event(char* event_name, float event_value, int drop_state,
     for (int i = 0; i < NELEMS(event_names); i++) {
       if (strcmp(event_names[i], event_name) == 0) {
         uint32_t color = led_values[i];
-        setAllColor(color);
+
+        if (current_drop_state == DROP) {
+          if (strcmp("wobble", event_name) == 0) {
+            color = fade_color(color, event_value);
+            setAllColor(color);
+          }
+        } else {
+          setAllColor(color);
+        }
       }
     }
   }
@@ -280,12 +294,4 @@ void setupNetworking(void) {
   cc3000.printIPdotsRev(getIPAddress());
   Serial.print(F(":"));
   Serial.print(String(LISTEN_PORT, DEC));
-}
-
-// Fill the dots one after the other with a color
-void setAllColor(uint32_t c) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-  }
-  strip.show();
 }
