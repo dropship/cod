@@ -52,9 +52,14 @@ unsigned long recvDataLen;
 #define SNARE       2
 #define WOBBLE      3
 #define SIREN       4
-
 char* event_names[5];
 uint32_t led_values[5];
+
+#define AMBIENT   0
+#define BUILD     1
+#define DROP_ZONE 2
+#define DROP      3
+int current_drop_state = AMBIENT;
 
 
 unsigned long previousMillis = millis();
@@ -62,6 +67,8 @@ long interval = 10; // Refresh every 10ms.
 
 // Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(30, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+uint32_t white = strip.Color(255, 255, 255);
+uint32_t black = strip.Color(0, 0, 0);
 
 void setup(void) {
   Serial.begin(115200);
@@ -87,34 +94,58 @@ void setup(void) {
   led_values[SIREN]   = strip.Color(255, 0, 255); // Purple
 }
 
+int loop_count = 0;
 void loop(void) {
   int rcvlen, i = 0;
   uint8_t r, g, b;
+  uint32_t color;
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
+    loop_count++;
 
-    // Fade out all valuess
-    for (i=0;i<strip.numPixels();i++) {
-      r = (strip.getPixelColor(i) >> 16);
-      g = (strip.getPixelColor(i) >>  8);
-      b = (strip.getPixelColor(i)      );
+    if (loop_count % 50 == 0) {
+      Serial.print("current_drop_state: ");
+      Serial.println(current_drop_state);
+    }
 
-      r *= 0.90;
-      g *= 0.90;
-      b *= 0.90;
+    // Different drop-state animation loops
+    if (current_drop_state == DROP) {
+      color = strip.getPixelColor(i);
+      if (loop_count % 5 == 0) {
+        if (color == white) {
+          setAllColor(black);
+        } else {
+          setAllColor(white);
+        }
+      }
+    }
+    else if (current_drop_state == AMBIENT ||
+             current_drop_state == BUILD ||
+             current_drop_state == DROP_ZONE) {
+      // Fade out all valuess
+      for (i=0;i<strip.numPixels();i++) {
+        color = strip.getPixelColor(i);
+        r = color >> 16;
+        g = color >> 8;
+        b = color;
 
-      strip.setPixelColor(i, r, g, b);
+        r *= 0.90;
+        g *= 0.90;
+        b *= 0.90;
+
+        strip.setPixelColor(i, r, g, b);
+      }
     }
     strip.show();
+  }
 
-    rcvlen = recvfrom(listen_socket, rx_packet_buffer, 255, 0, &from, &fromlen);
+  rcvlen = recvfrom(listen_socket, rx_packet_buffer, 255, 0, &from, &fromlen);
 
-    if (rcvlen > 0) {
-      parse_events(rx_packet_buffer);
-      memset(rx_packet_buffer, 0, 256);
-    }
+  if (rcvlen > 0) {
+    parse_events(rx_packet_buffer);
+    memset(rx_packet_buffer, 0, 256);
   }
 }
 
@@ -135,21 +166,26 @@ void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
   /*char* sequence    = strtok_r(message, ",", &message);*/
   char* event_name  = strtok_r(message, ",", &message);
-  char* event_value = strtok_r(message, ",", &message);
-  char* drop_state  = strtok_r(message, ",", &message);
-  char* build       = strtok_r(message, ",", &message);
-  char* lcrank      = strtok_r(message, ",", &message);
-  char* rcrank      = strtok_r(message, ",", &message);
+  float event_value = atof(strtok_r(message, ",", &message));
+  int   drop_state  = atoi(strtok_r(message, ",", &message));
+  float build       = atof(strtok_r(message, ",", &message));
+  float lcrank      = atof(strtok_r(message, ",", &message));
+  float rcrank      = atof(strtok_r(message, ",", &message));
 
   Serial.print(F("  event:"));
-  Serial.println(event_name);
+  Serial.print(event_name);
+  Serial.print(" : ");
+  Serial.println(drop_state);
 
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
 
-void handle_event(char* event_name, char* event_value, char* drop_state,
-                  char* build, char* lcrank, char* rcrank) {
+void handle_event(char* event_name, float event_value, int drop_state,
+                  float build, float lcrank, float rcrank) {
+  current_drop_state = drop_state;
+
   if (strcmp(event_name, "nop") == 0) {
+
   }
   else {
     for (int i = 0; i < NELEMS(event_names); i++) {
