@@ -70,16 +70,25 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ
 uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
 uint32_t red   = strip.Color(255, 0, 0);
+uint32_t palette_1[5];
+
+void define_palettes() {
+  palette_1[CONTROL] = white;
+  palette_1[KICK]    = strip.Color(19, 95, 255);
+  palette_1[SNARE]   = strip.Color(139, 255, 32);
+  palette_1[WOBBLE]  = strip.Color(255, 77, 32);
+  palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
+}
 
 void setup(void) {
   Serial.begin(115200);
   Serial.println(F("Hello, CC3000!"));
   setupNetworking();
+  define_palettes();
   Serial.print("Hello!");
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-
 
   // Setup event lookup structures
   event_names[CONTROL] = "nop";
@@ -88,11 +97,13 @@ void setup(void) {
   event_names[WOBBLE]  = "wobble";
   event_names[SIREN]   = "siren";
 
-  led_values[CONTROL] = white;
-  led_values[KICK]    = strip.Color(255, 0, 255); // Purple
-  led_values[SNARE]   = strip.Color(255, 255, 102); // Yellow
-  led_values[WOBBLE]  = red;
-  led_values[SIREN]   = strip.Color(255, 0, 255); // Purple
+  uint32_t* palette = palette_1;
+
+  led_values[CONTROL] = palette[CONTROL];
+  led_values[KICK]    = palette[KICK]; // Purple
+  led_values[SNARE]   = palette[SNARE]; // Yellow
+  led_values[WOBBLE]  = palette[WOBBLE];
+  led_values[SIREN]   = palette[SIREN];
 }
 
 int loop_count = 0;
