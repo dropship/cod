@@ -107,6 +107,8 @@ void setup(void) {
 }
 
 int loop_count = 0;
+int strobe_switch = 0;
+
 void loop(void) {
   int rcvlen, i = 0;
   uint32_t color;
@@ -118,16 +120,32 @@ void loop(void) {
 
     // Different drop-state animation loops
     if (current_drop_state == DROP) {
-      //
+      if (loop_count % 64 < 16) {
+        strobe_switch = 1;
+      } else {
+        strobe_switch = 0;
+      }
+
+      // Strobe every 5th light
+      for(uint16_t i=0; i<strip.numPixels(); i++) {
+        if (strobe_switch) {
+          if ((i+1) % 5 == 0 && (loop_count % 4 == 0)) {
+            color = strip.getPixelColor(i);
+            if (color == black) {
+              strip.setPixelColor(i, white);
+            } else {
+              strip.setPixelColor(i, black);
+            }
+          }
+        }
+      }
     }
     else if (current_drop_state == AMBIENT ||
              current_drop_state == BUILD ||
              current_drop_state == DROP_ZONE) {
       // Fade out all valuess
-      for (i=0;i<strip.numPixels();i++) {
-        color = strip.getPixelColor(i);
-        strip.setPixelColor(i, fade_color(color, 0.9));
-      }
+      color = strip.getPixelColor(0);
+      setAllColor(fade_color(color, 0.9));
     }
     strip.show();
   }
@@ -156,8 +174,15 @@ uint32_t fade_color(uint32_t color, float fade) {
 
 // Fill the dots one after the other with a color
 void setAllColor(uint32_t c) {
+  setAllColor(c, 99999999);
+}
+
+// Fill the dots one after the other with a color, except every nth dot.
+void setAllColor(uint32_t c, int except) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
+    if (!((i+1) % except == 0)) {
+      strip.setPixelColor(i, c);
+    }
   }
   strip.show();
 }
@@ -189,11 +214,6 @@ void parse_message(char* message) {
   float lcrank      = atof(strtok_r(message, ",", &message));
   float rcrank      = atof(strtok_r(message, ",", &message));
 
-  /*Serial.print(" : ");
-  Serial.print(drop_state);
-  Serial.print(" : ");
-  Serial.println(event_value);*/
-
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
 
@@ -202,21 +222,20 @@ void handle_event(char* event_name, float event_value, int drop_state,
   current_drop_state = drop_state;
 
   if (strcmp(event_name, "nop") == 0) {
-
+    return;
   }
-  else {
-    for (int i = 0; i < NELEMS(event_names); i++) {
-      if (strcmp(event_names[i], event_name) == 0) {
-        uint32_t color = led_values[i];
 
-        if (current_drop_state == DROP) {
-          if (strcmp("wobble", event_name) == 0) {
-            color = fade_color(color, event_value);
-            setAllColor(color);
-          }
-        } else {
-          setAllColor(color);
+  for (int i = 0; i < NELEMS(event_names); i++) {
+    if (strcmp(event_names[i], event_name) == 0) {
+      uint32_t color = led_values[i];
+
+      if (current_drop_state == DROP) {
+        if (strcmp("wobble", event_name) == 0) {
+          color = fade_color(color, event_value);
+          setAllColor(color, 5);
         }
+      } else {
+        setAllColor(color);
       }
     }
   }
