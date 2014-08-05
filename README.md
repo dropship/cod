@@ -42,3 +42,22 @@ And you're off to the :horse: races
 `Documents/Ardunio/libraries/<library>`, not `vendor`.
 
 - Exit `ino serial` - `cntl-A cntl-X`
+
+## Portable Hardware
+
+#### Parts List
+
+- Ardunio Mega 2560 (Uno may be enough, if not lighting hundreds of NeoPixels)
+- [Adafruit CC3000 WiFi Shield](https://www.adafruit.com/products/1491)
+- [NeoPixel LED Strip](https://www.adafruit.com/categories/183)
+- Battery pack - This [9V pack](https://www.adafruit.com/products/248) plugs right into the Arduino
+
+#### Instructions
+
+- Attach WiFi Shield to Arduino
+- Connect NeoPixel data line to Arduino Pin 6
+- Power NeoPixel with additional 5V Power supply
+
+#### Notes
+
+- NeoPixel strips are not designed for a lot of repeated flexing. Be aware where you mount them.
