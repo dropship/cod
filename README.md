@@ -66,3 +66,7 @@ And you're off to the :horse: races
 #### Notes
 
 - NeoPixel strips are not designed for a lot of repeated flexing. Be aware where you mount them.
+
+#### Reference
+
+- [Adafruit NeoPixel Uberguide](https://learn.adafruit.com/adafruit-neopixel-uberguide/overview)
