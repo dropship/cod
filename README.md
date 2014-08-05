@@ -56,7 +56,12 @@ And you're off to the :horse: races
 
 - Attach WiFi Shield to Arduino
 - Connect NeoPixel data line to Arduino Pin 6
-- Power NeoPixel with additional 5V Power supply
+- Power NeoPixel with Arduino GND and 5V pins.
+  - This limits the number of pixels you can use. The 5V pin can supply 500mA of current and each
+    pixel can drop up to 60mA at full brightness. We rarely use full brightness in the default
+    program.
+  - If you would like to power more, get an external 5V power supply or lower the NeoPixel brightness
+    with `setBrightness()`.
 
 #### Notes
 
