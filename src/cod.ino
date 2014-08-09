@@ -71,8 +71,9 @@ unsigned long recvDataLen;
 #define SNARE       2
 #define WOBBLE      3
 #define SIREN       4
-char* event_names[5];
-uint32_t led_values[5];
+#define CHORD       5
+char* event_names[6];
+uint32_t led_values[6];
 
 #define POST_DROP -1
 #define AMBIENT    0
@@ -104,6 +105,7 @@ void define_palettes() {
   palette_1[CONTROL] = white;
   palette_1[KICK]    = strip.Color(19, 95, 255);
   palette_1[SNARE]   = strip.Color(139, 255, 32);
+  palette_1[CHORD]   = strip.Color(255, 0, 255); // Magenta
   palette_1[WOBBLE]  = strip.Color(255, 77, 32);
   palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
 }
@@ -123,6 +125,7 @@ void setup(void) {
   event_names[CONTROL] = "nop";
   event_names[KICK]    = "kick";
   event_names[SNARE]   = "snare";
+  event_names[CHORD]   = "chord";
   event_names[WOBBLE]  = "wobble";
   event_names[SIREN]   = "siren";
 
@@ -187,7 +190,11 @@ void handle_event(char* event_name, float event_value, int drop_state,
           setAllColor(color, 5);
         }
       } else {
-        setAllColor(color);
+        if (strcmp("chord", event_name) == 0) {
+          setNthColor(color, 5);
+        } else {
+          setAllColor(color);
+        }
       }
     }
   }
@@ -209,6 +216,7 @@ void setupNeoPixel() {
   led_values[KICK]    = palette[KICK]; // Purple
   led_values[SNARE]   = palette[SNARE]; // Yellow
   led_values[WOBBLE]  = palette[WOBBLE];
+  led_values[CHORD]   = palette[CHORD];
   led_values[SIREN]   = palette[SIREN];
 }
 
@@ -240,17 +248,13 @@ void setAllColor(uint32_t c, int except) {
       strip.setPixelColor(i, c);
     }
   }
-  strip.show();
 }
 
-// Fill the dots one after the other with a color, except every nth pixel.
-void setAllColorOnly(uint32_t c, int only) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    if (((i+1) % only == 0)) {
-      strip.setPixelColor(i, c);
-    }
+// Fill the dots one after the other with a color, but only every nth pixel.
+void setNthColor(uint32_t c, int only) {
+  for(uint16_t i=(only - 1); i<strip.numPixels(); i += only) {
+    strip.setPixelColor(i, c);
   }
-  strip.show();
 }
 
 
@@ -263,7 +267,6 @@ void repaintLights() {
     } else {
       strobe_switch = 0;
       strobe_color = black;
-      setAllColorOnly(strobe_color, 5);
     }
 
     // Strobe every 5th light
@@ -274,7 +277,7 @@ void repaintLights() {
         } else {
           strobe_color = white;
         }
-        setAllColorOnly(strobe_color, 5);
+        setNthColor(strobe_color, 5);
       }
     }
   }
@@ -282,8 +285,10 @@ void repaintLights() {
            current_drop_state == BUILD ||
            current_drop_state == DROP_ZONE) {
     // Fade out all valuess
-    color = strip.getPixelColor(0);
-    setAllColor(fade_color(color, 0.9));
+    for(uint16_t i=0; i<strip.numPixels(); i++) {
+      color = strip.getPixelColor(i);
+      strip.setPixelColor(i, fade_color(color, 0.9));
+    }
   }
   strip.show();
 }
