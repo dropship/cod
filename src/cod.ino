@@ -233,7 +233,7 @@ void setAllColor(uint32_t c) {
 }
 
 
-// Fill the dots one after the other with a color, except every nth dot.
+// Fill the dots one after the other with a color, except every nth pixel.
 void setAllColor(uint32_t c, int except) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     if (!((i+1) % except == 0)) {
