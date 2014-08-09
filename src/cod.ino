@@ -91,7 +91,7 @@ long interval = 10; // Refresh every 10ms.
 /**** NEOPIXEL CONFIG *****/
 
 #define NEOPIXEL_PIN 6
-#define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
+#define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
 // Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -176,7 +176,7 @@ void handle_event(char* event_name, float event_value, int drop_state,
     return;
   }
 
-  for (int i = 0; i < NELEMS(event_names); i++) {
+  for (int i = 0; i < SIZE(event_names); i++) {
     if (strcmp(event_names[i], event_name) == 0) {
       uint32_t color = led_values[i];
 
