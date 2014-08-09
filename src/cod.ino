@@ -140,6 +140,11 @@ void loop(void) {
     previousMillis = currentMillis;
     loop_count++;
 
+    if (loop_count % 100 == 0) {
+      Serial.print(F("Alive!"));
+      Serial.println(loop_count);
+    }
+
     // change lighting state every [interval] milliseconds
     repaintLights();
   }
@@ -279,8 +284,9 @@ void parse_events(char* packet) {
   int count = 0;
   while ((message = strtok_r(packet, "$", &packet)) != NULL) {
     count++;
-    if (count == 2) {
-      Serial.println(F("multi-message"));
+    if (count >= 2) {
+      Serial.print(count);
+      Serial.println(F("x-message"));
     }
 
     parse_message(message);
@@ -290,10 +296,9 @@ void parse_events(char* packet) {
 
 void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
-  /*char* sequence    = strtok_r(message, ",", &message);*/
 
-  Serial.print(F("  event:"));
-  Serial.println(message);
+  /*Serial.print(F("  event:"));*/
+  /*Serial.println(message);*/
 
   char* event_name  = strtok_r(message, ",", &message);
   float event_value = atof(strtok_r(message, ",", &message));
