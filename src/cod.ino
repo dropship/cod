@@ -1,4 +1,11 @@
-// Listens for JSON messages via UDP
+/*
+    Lighting controller for Anita's Dropship
+    http://dropship.github.io
+
+    No warranties and stuff.
+
+    (c) 2014 Alex Southgate, Carlos Mogollan, Kasima Tharnpipitchai
+*/
 
 #include <Adafruit_CC3000.h>
 #include <Adafruit_NeoPixel.h>
@@ -8,7 +15,13 @@
 #include <utility/socket.h>
 #include <utility/debug.h>
 #include <MemoryFree.h>
+
 #include "config.h"
+
+
+
+
+/**** ADAFRUIT CC3000 CONFIG ****/
 
 // These are the interrupt and control pins
 #define ADAFRUIT_CC3000_IRQ   3  // MUST be an interrupt pin!
@@ -16,18 +29,20 @@
 #define ADAFRUIT_CC3000_VBAT  5
 #define ADAFRUIT_CC3000_CS    10
 
-#define LISTEN_PORT 9000
 // Use hardware SPI for the remaining pins
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
-
-#define NEOPIXEL_PIN 6
-#define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
-
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(
   ADAFRUIT_CC3000_CS,
   ADAFRUIT_CC3000_IRQ,
   ADAFRUIT_CC3000_VBAT,
   SPI_CLOCK_DIVIDER); // you can change this clock speed
+
+
+
+
+/**** NETWORKING CONFIG ****/
+
+#define LISTEN_PORT 9000
 
 const unsigned long
   dhcpTimeout     = 60L * 1000L, // Max time to wait for address from DHCP
@@ -46,6 +61,10 @@ char rx_packet_buffer[256];
 unsigned long recvDataLen;
 
 
+
+
+/**** DROPSHIP PROTOCOL ****/
+
 // Structures for event name lookup
 #define CONTROL     0
 #define KICK        1
@@ -61,9 +80,16 @@ uint32_t led_values[5];
 #define DROP      3
 int current_drop_state = AMBIENT;
 
-
 unsigned long previousMillis = millis();
 long interval = 10; // Refresh every 10ms.
+
+
+
+
+/**** NEOPIXEL CONFIG *****/
+
+#define NEOPIXEL_PIN 6
+#define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
 // Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -80,15 +106,16 @@ void define_palettes() {
   palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
 }
 
+
+
+
+/**** MAIN PROGRAM ****/
+
 void setup(void) {
   Serial.begin(115200);
   Serial.println(F("Hello, CC3000!"));
   setupNetworking();
-  define_palettes();
   Serial.print("Hello!");
-
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
 
   // Setup event lookup structures
   event_names[CONTROL] = "nop";
@@ -97,59 +124,26 @@ void setup(void) {
   event_names[WOBBLE]  = "wobble";
   event_names[SIREN]   = "siren";
 
-  uint32_t* palette = palette_1;
-
-  led_values[CONTROL] = palette[CONTROL];
-  led_values[KICK]    = palette[KICK]; // Purple
-  led_values[SNARE]   = palette[SNARE]; // Yellow
-  led_values[WOBBLE]  = palette[WOBBLE];
-  led_values[SIREN]   = palette[SIREN];
+  setupNeoPixel();
 }
+
 
 int loop_count = 0;
 int strobe_switch = 0;
+uint32_t color;
 
 void loop(void) {
-  int rcvlen, i = 0;
-  uint32_t color;
+  int rcvlen;
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
     loop_count++;
 
-    // Different drop-state animation loops
-    if (current_drop_state == DROP) {
-      if (loop_count % 64 < 16) {
-        strobe_switch = 1;
-      } else {
-        strobe_switch = 0;
-      }
-
-      // Strobe every 5th light
-      for(uint16_t i=0; i<strip.numPixels(); i++) {
-        if (strobe_switch) {
-          if ((i+1) % 5 == 0 && (loop_count % 4 == 0)) {
-            color = strip.getPixelColor(i);
-            if (color == black) {
-              strip.setPixelColor(i, white);
-            } else {
-              strip.setPixelColor(i, black);
-            }
-          }
-        }
-      }
-    }
-    else if (current_drop_state == AMBIENT ||
-             current_drop_state == BUILD ||
-             current_drop_state == DROP_ZONE) {
-      // Fade out all valuess
-      color = strip.getPixelColor(0);
-      setAllColor(fade_color(color, 0.9));
-    }
-    strip.show();
+    prettyPrettyLights();
   }
 
+  // Receive events
   rcvlen = recvfrom(listen_socket, rx_packet_buffer, 255, 0, &from, &fromlen);
 
   if (rcvlen > 0) {
@@ -158,34 +152,10 @@ void loop(void) {
   }
 }
 
-uint32_t fade_color(uint32_t color, float fade) {
-  uint8_t r, g, b;
 
-  r = (color >> 16);
-  g = (color >> 8);
-  b = color;
 
-  r *= fade;
-  g *= fade;
-  b *= fade;
 
-  return strip.Color(r, g, b);
-}
-
-// Fill the dots one after the other with a color
-void setAllColor(uint32_t c) {
-  setAllColor(c, 99999999);
-}
-
-// Fill the dots one after the other with a color, except every nth dot.
-void setAllColor(uint32_t c, int except) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    if (!((i+1) % except == 0)) {
-      strip.setPixelColor(i, c);
-    }
-  }
-  strip.show();
-}
+/**** DROPSHIP EVENT HANDLING ****/
 
 void parse_events(char* packet) {
   char* message;
@@ -199,6 +169,7 @@ void parse_events(char* packet) {
     parse_message(message);
   }
 }
+
 
 void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
@@ -216,6 +187,7 @@ void parse_message(char* message) {
 
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
+
 
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
@@ -241,6 +213,95 @@ void handle_event(char* event_name, float event_value, int drop_state,
   }
 }
 
+
+
+
+/**** NEOPIXEL ****/
+
+void setupNeoPixel() {
+  define_palettes();
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+
+  uint32_t* palette = palette_1;
+
+  led_values[CONTROL] = palette[CONTROL];
+  led_values[KICK]    = palette[KICK]; // Purple
+  led_values[SNARE]   = palette[SNARE]; // Yellow
+  led_values[WOBBLE]  = palette[WOBBLE];
+  led_values[SIREN]   = palette[SIREN];
+}
+
+uint32_t fade_color(uint32_t color, float fade) {
+  uint8_t r, g, b;
+
+  r = (color >> 16);
+  g = (color >> 8);
+  b = color;
+
+  r *= fade;
+  g *= fade;
+  b *= fade;
+
+  return strip.Color(r, g, b);
+}
+
+
+// Fill the dots one after the other with a color
+void setAllColor(uint32_t c) {
+  setAllColor(c, 99999999);
+}
+
+
+// Fill the dots one after the other with a color, except every nth dot.
+void setAllColor(uint32_t c, int except) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    if (!((i+1) % except == 0)) {
+      strip.setPixelColor(i, c);
+    }
+  }
+  strip.show();
+}
+
+
+void prettyPrettyLights() {
+  // Different drop-state animation loops
+  if (current_drop_state == DROP) {
+    if (loop_count % 64 < 16) {
+      strobe_switch = 1;
+    } else {
+      strobe_switch = 0;
+    }
+
+    // Strobe every 5th light
+    for(uint16_t i=0; i<strip.numPixels(); i++) {
+      if (strobe_switch) {
+        if ((i+1) % 5 == 0 && (loop_count % 4 == 0)) {
+          color = strip.getPixelColor(i);
+          if (color == black) {
+            strip.setPixelColor(i, white);
+          } else {
+            strip.setPixelColor(i, black);
+          }
+        }
+      }
+    }
+  }
+  else if (current_drop_state == AMBIENT ||
+           current_drop_state == BUILD ||
+           current_drop_state == DROP_ZONE) {
+    // Fade out all valuess
+    color = strip.getPixelColor(0);
+    setAllColor(fade_color(color, 0.9));
+  }
+  strip.show();
+}
+
+
+
+
+/**** NETWORKING ****/
+
 bool displayConnectionDetails(void) {
   uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
 
@@ -257,6 +318,7 @@ bool displayConnectionDetails(void) {
     return true;
   }
 }
+
 
 uint32_t getIPAddress(void) {
   uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
