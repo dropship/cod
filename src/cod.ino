@@ -74,10 +74,12 @@ unsigned long recvDataLen;
 char* event_names[5];
 uint32_t led_values[5];
 
-#define AMBIENT   0
-#define BUILD     1
-#define DROP_ZONE 2
-#define DROP      3
+#define POST_DROP -1
+#define AMBIENT    0
+#define BUILD      1
+#define DROP_ZONE  2
+#define PRE_DROP   3
+#define DROP       4
 int current_drop_state = AMBIENT;
 
 unsigned long previousMillis = millis();
