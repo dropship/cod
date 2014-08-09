@@ -143,8 +143,9 @@ void loop(void) {
     loop_count++;
 
     if (loop_count % 100 == 0) {
-      Serial.print(F("Alive!"));
-      Serial.println(loop_count);
+      Serial.print(F("Alive for "));
+      Serial.print(loop_count / 100);
+      Serial.println(F(" seconds"));
     }
 
     // change lighting state every [interval] milliseconds
