@@ -243,7 +243,18 @@ void setAllColor(uint32_t c, int except) {
   strip.show();
 }
 
+// Fill the dots one after the other with a color, except every nth pixel.
+void setAllColorOnly(uint32_t c, int only) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    if (((i+1) % only == 0)) {
+      strip.setPixelColor(i, c);
+    }
+  }
+  strip.show();
+}
 
+
+uint32_t strobe_color = black;
 void repaintLights() {
   // Different drop-state animation loops
   if (current_drop_state == DROP) {
@@ -251,19 +262,19 @@ void repaintLights() {
       strobe_switch = 1;
     } else {
       strobe_switch = 0;
+      strobe_color = black;
+      setAllColorOnly(strobe_color, 5);
     }
 
     // Strobe every 5th light
-    for(uint16_t i=0; i<strip.numPixels(); i++) {
-      if (strobe_switch) {
-        if ((i+1) % 5 == 0 && (loop_count % 4 == 0)) {
-          color = strip.getPixelColor(i);
-          if (color == black) {
-            strip.setPixelColor(i, white);
-          } else {
-            strip.setPixelColor(i, black);
-          }
+    if (strobe_switch) {
+      if (loop_count % 4 == 0) {
+        if (strobe_color == white) {
+          strobe_color = black;
+        } else {
+          strobe_color = white;
         }
+        setAllColorOnly(strobe_color, 5);
       }
     }
   }
