@@ -42,7 +42,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(
 
 /**** NETWORKING CONFIG ****/
 
-#define LISTEN_PORT 9000
+#define LISTEN_PORT 9000 // where Dropship is broadcsting events
 
 const unsigned long
   dhcpTimeout     = 60L * 1000L, // Max time to wait for address from DHCP
@@ -140,7 +140,8 @@ void loop(void) {
     previousMillis = currentMillis;
     loop_count++;
 
-    prettyPrettyLights();
+    // change lighting state every [interval] milliseconds
+    repaintLights();
   }
 
   // Receive events
@@ -155,40 +156,11 @@ void loop(void) {
 
 
 
-/**** DROPSHIP EVENT HANDLING ****/
-
-void parse_events(char* packet) {
-  char* message;
-  int count = 0;
-  while ((message = strtok_r(packet, "$", &packet)) != NULL) {
-    count++;
-    if (count == 2) {
-      Serial.println(F("multi-message"));
-    }
-
-    parse_message(message);
-  }
-}
-
-
-void parse_message(char* message) {
-  // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
-  /*char* sequence    = strtok_r(message, ",", &message);*/
-
-  Serial.print(F("  event:"));
-  Serial.println(message);
-
-  char* event_name  = strtok_r(message, ",", &message);
-  float event_value = atof(strtok_r(message, ",", &message));
-  int   drop_state  = atoi(strtok_r(message, ",", &message));
-  float build       = atof(strtok_r(message, ",", &message));
-  float lcrank      = atof(strtok_r(message, ",", &message));
-  float rcrank      = atof(strtok_r(message, ",", &message));
-
-  handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
-}
-
-
+/***
+ * This function is called whenever an event is received.
+ *
+ * CUSTOMIZE LIGHTING RESPONSE TO EVENTS BY REWRITING THIS FUNCTION.
+ ***/
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
   current_drop_state = drop_state;
@@ -264,7 +236,7 @@ void setAllColor(uint32_t c, int except) {
 }
 
 
-void prettyPrettyLights() {
+void repaintLights() {
   // Different drop-state animation loops
   if (current_drop_state == DROP) {
     if (loop_count % 64 < 16) {
@@ -296,6 +268,43 @@ void prettyPrettyLights() {
   }
   strip.show();
 }
+
+
+
+
+/**** DROPSHIP EVENT HANDLING ****/
+
+void parse_events(char* packet) {
+  char* message;
+  int count = 0;
+  while ((message = strtok_r(packet, "$", &packet)) != NULL) {
+    count++;
+    if (count == 2) {
+      Serial.println(F("multi-message"));
+    }
+
+    parse_message(message);
+  }
+}
+
+
+void parse_message(char* message) {
+  // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
+  /*char* sequence    = strtok_r(message, ",", &message);*/
+
+  Serial.print(F("  event:"));
+  Serial.println(message);
+
+  char* event_name  = strtok_r(message, ",", &message);
+  float event_value = atof(strtok_r(message, ",", &message));
+  int   drop_state  = atoi(strtok_r(message, ",", &message));
+  float build       = atof(strtok_r(message, ",", &message));
+  float lcrank      = atof(strtok_r(message, ",", &message));
+  float rcrank      = atof(strtok_r(message, ",", &message));
+
+  handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
+}
+
 
 
 
