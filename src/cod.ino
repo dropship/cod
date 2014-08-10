@@ -435,8 +435,7 @@ void setupNetworking(void) {
 
   listen_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-  if (setsockopt(listen_socket, SOL_SOCKET, SOCKOPT_RECV_NONBLOCK, &optvalue_block, sizeof(long)) != 0)
-  {
+  if (setsockopt(listen_socket, SOL_SOCKET, SOCKOPT_RECV_NONBLOCK, &optvalue_block, sizeof(long)) != 0) {
     Serial.println(F("Error setting non-blocking mode on socket."));
   }
 
