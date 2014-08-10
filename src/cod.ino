@@ -90,9 +90,9 @@ long interval = 10; // Refresh every 10ms.
 
 
 /**** NEOPIXEL CONFIG *****/
-
-#define NEOPIXEL_PIN 6
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
+#define NEOPIXEL_PIN 6
+#define STROBE_NTH 10 
 
 // Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -133,7 +133,7 @@ void setup(void) {
 }
 
 
-int loop_count = 0;
+unsigned long loop_count = 0;
 int strobe_switch = 0;
 uint32_t color;
 
@@ -143,12 +143,12 @@ void loop(void) {
 
   if (currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
-    loop_count++;
+    loop_count += 1;
 
     if (loop_count % 100 == 0) {
       Serial.print(F("Alive for "));
-      Serial.print(loop_count / 100);
-      Serial.println(F(" seconds"));
+      Serial.print(loop_count);
+      Serial.println(F(" loops"));
     }
 
     // change lighting state every [interval] milliseconds
@@ -187,11 +187,12 @@ void handle_event(char* event_name, float event_value, int drop_state,
       if (current_drop_state == DROP) {
         if (strcmp("wobble", event_name) == 0) {
           color = fade_color(color, event_value);
-          setAllColor(color, 5);
+          setAllColor(color, STROBE_NTH);
         }
       } else {
         if (strcmp("chord", event_name) == 0) {
-          setNthColor(color, 5);
+          int n = ((int) (event_value * 75));
+          setNthColor(color, n);
         } else {
           setAllColor(color);
         }
@@ -258,28 +259,11 @@ void setNthColor(uint32_t c, int only) {
 }
 
 
-uint32_t strobe_color = black;
+
 void repaintLights() {
   // Different drop-state animation loops
   if (current_drop_state == DROP) {
-    if (loop_count % 64 < 16) {
-      strobe_switch = 1;
-    } else {
-      strobe_switch = 0;
-      strobe_color = black;
-    }
-
-    // Strobe every 5th light
-    if (strobe_switch) {
-      if (loop_count % 4 == 0) {
-        if (strobe_color == white) {
-          strobe_color = black;
-        } else {
-          strobe_color = white;
-        }
-        setNthColor(strobe_color, 5);
-      }
-    }
+    strobe_random_pixel();
   }
   else if (current_drop_state == AMBIENT ||
            current_drop_state == BUILD ||
@@ -293,7 +277,36 @@ void repaintLights() {
   strip.show();
 }
 
+/**
+  Strobes a random Nth pixel for the DROP effect.
+*/
+uint32_t strobe_color = white;
+unsigned long strobe_pixel;
+void strobe_random_pixel() {
+  if (loop_count % 64 == 0) {
+    // Choose pixel to strobe
+    strobe_pixel = (random(strip.numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
+  }
+  if (loop_count % 48 < 16) {
+    // Enable strobing for 16 loops
+    strobe_switch = 1;
+  }
+  else {
+    // Disable strobing for 32 loops
+    strobe_switch = 0;
+    // Wipe any strobes
+    setNthColor(black, STROBE_NTH);
+  }
 
+  if (strobe_switch && loop_count % 4 == 0) {
+    if (strobe_color == white) {
+      strobe_color = black;
+    } else {
+      strobe_color = white;
+    }
+    strip.setPixelColor(strobe_pixel, strobe_color);
+  }
+}
 
 
 /**** DROPSHIP EVENT HANDLING ****/
