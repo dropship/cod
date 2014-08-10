@@ -268,16 +268,19 @@ void repaintLights() {
   // Different drop-state animation loops
   if (current_drop_state == DROP) {
     strobe_random_pixel();
-  } else if (current_drop_state == PRE_DROP) {
+  }
+  else if (current_drop_state == PRE_DROP) {
     for (int i = 0; i < strip.numPixels(); i += 30) {
       strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
     }
     fade_all_pixels();
-  } else if (current_drop_state == AMBIENT ||
-             current_drop_state == BUILD ||
-             current_drop_state == DROP_ZONE) {
+  }
+  else if (current_drop_state == AMBIENT ||
+           current_drop_state == BUILD ||
+           current_drop_state == DROP_ZONE) {
     fade_all_pixels();
   }
+
   strip.show();
 }
 
