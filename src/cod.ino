@@ -178,11 +178,12 @@ void handle_event(char* event_name, float event_value, int drop_state,
   int previous_drop_state = current_drop_state;
   current_drop_state = drop_state;
 
-  if (drop_state == PRE_DROP) {
-    if (previous_drop_state != PRE_DROP) {
-      // Wipe the slate when switching to PRE_DROP
-      setAllColor(black);
-    }
+  if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
+    // Wipe the slate when switching to PRE_DROP
+    setAllColor(black);
+  }
+
+  if (strcmp(event_name, "nop") == 0) {
     return;
   }
 
