@@ -92,7 +92,7 @@ long interval = 10; // Refresh every 10ms.
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 #define NEOPIXEL_PIN 6
-#define STROBE_NTH 10 
+#define STROBE_NTH 10
 
 // Initialize neopixel
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -174,9 +174,14 @@ void loop(void) {
  ***/
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
+  int previous_drop_state = current_drop_state;
   current_drop_state = drop_state;
 
-  if (strcmp(event_name, "nop") == 0) {
+  if (drop_state == PRE_DROP) {
+    if (previous_drop_state != PRE_DROP) {
+      // Wipe the slate when switching to PRE_DROP
+      setAllColor(black);
+    }
     return;
   }
 
@@ -259,22 +264,29 @@ void setNthColor(uint32_t c, int only) {
 }
 
 
-
 void repaintLights() {
   // Different drop-state animation loops
   if (current_drop_state == DROP) {
     strobe_random_pixel();
-  }
-  else if (current_drop_state == AMBIENT ||
-           current_drop_state == BUILD ||
-           current_drop_state == DROP_ZONE) {
-    // Fade out all valuess
-    for(uint16_t i=0; i<strip.numPixels(); i++) {
-      color = strip.getPixelColor(i);
-      strip.setPixelColor(i, fade_color(color, 0.9));
+  } else if (current_drop_state == PRE_DROP) {
+    for (int i = 0; i < strip.numPixels(); i += 30) {
+      strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
     }
+    fade_all_pixels();
+  } else if (current_drop_state == AMBIENT ||
+             current_drop_state == BUILD ||
+             current_drop_state == DROP_ZONE) {
+    fade_all_pixels();
   }
   strip.show();
+}
+
+void fade_all_pixels() {
+  // Fade out all values
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    color = strip.getPixelColor(i);
+    strip.setPixelColor(i, fade_color(color, 0.9));
+  }
 }
 
 /**
