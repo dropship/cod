@@ -1,4 +1,4 @@
-## Ca$h on Delivery
+## Ca$h on Delivery - Escudo Dos Version
 
 Consumes dropship events from [5-by-5](dropship/5-by-5) and produces
 lighting effects using NeoPixel lighting strips.
@@ -47,25 +47,29 @@ And you're off to the :horse: races
 
 #### Parts List
 
-- Ardunio Mega 2560 (Uno may be enough, if not lighting hundreds of NeoPixels)
+- Ardunio Uno
 - [Adafruit CC3000 WiFi Shield](https://www.adafruit.com/products/1491)
-- [NeoPixel LED Strip](https://www.adafruit.com/categories/183)
+- [Sparkfun Escudo Dos El Wire Shield](https://www.sparkfun.com/products/10878)
+- [3V El Wire Inverter](https://www.sparkfun.com/products/10201)
+- [El Wire](https://www.sparkfun.com/products/10197) (up to 5 strands, theoretically)
 - Battery pack - This [9V pack](https://www.adafruit.com/products/248) plugs right into the Arduino
 
 #### Instructions
 
 - Attach WiFi Shield to Arduino
-- Connect NeoPixel data line to Arduino Pin 6
-- Power NeoPixel with Arduino GND and 5V pins.
-  - This limits the number of pixels you can use. The 5V pin can supply 500mA of current and each
-    pixel can drop up to 60mA at full brightness. We rarely use full brightness in the default
-    program.
-  - If you would like to power more, get an external 5V power supply or lower the NeoPixel brightness
-    with `setBrightness()`.
+- Stack Escudo Dos Shield on top of WiFi Shield
+- Plug in inverter according to [Escudo Dos tutorial](https://www.sparkfun.com/tutorials/353)
+- Plug in el wire strands into proper channels
 
 #### Notes
 
-- NeoPixel strips are not designed for a lot of repeated flexing. Be aware where you mount them.
+- This version only supports flashing Strand A with the kick drum. Flashing other
+  strands in response to other messages would happen in the `handleEvent()` function.
+  Pull requests accepted.
+- The fading is flickery because the Escudo Dos doesn't support full fading.
+- The El Wire shield has some high voltages on it! Be careful.
+
+
 
 #### Reference
 
