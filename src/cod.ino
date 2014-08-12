@@ -8,7 +8,6 @@
 */
 
 #include <Adafruit_CC3000.h>
-#include <Adafruit_NeoPixel.h>
 #include <ccspi.h>
 #include <SPI.h>
 #include <string.h>
@@ -86,29 +85,25 @@ int current_drop_state = AMBIENT;
 unsigned long previousMillis = millis();
 long interval = 10; // Refresh every 10ms.
 
-
-
-
-/**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
-#define NEOPIXEL_PIN 6
-#define STROBE_NTH 10
 
-// Initialize neopixel
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t white = strip.Color(255, 255, 255);
-uint32_t black = strip.Color(0, 0, 0);
-uint32_t red   = strip.Color(255, 0, 0);
-uint32_t palette_1[5];
 
-void define_palettes() {
-  palette_1[CONTROL] = white;
-  palette_1[KICK]    = strip.Color(19, 95, 255);
-  palette_1[SNARE]   = strip.Color(139, 255, 32);
-  palette_1[CHORD]   = strip.Color(255, 0, 255); // Magenta
-  palette_1[WOBBLE]  = strip.Color(255, 77, 32);
-  palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
-}
+
+/**** ESCUDO DOS CONFIG ****/
+
+// pins 3, 4, 5, 10 are reserved by the Adafruit CC3000
+
+#define STRAND_A     2
+// #define STRAND_B     3
+// #define STRAND_C     4
+// #define STRAND_D     5
+#define STRAND_E     6
+#define STRAND_F     7
+#define STRAND_G     8
+#define STRAND_H     9
+// #define ESCUDO_LED   10
+
+int strand_values[10];
 
 
 
@@ -129,7 +124,7 @@ void setup(void) {
   event_names[WOBBLE]  = "wobble";
   event_names[SIREN]   = "siren";
 
-  setupNeoPixel();
+  setupEscudo();
 }
 
 
@@ -177,151 +172,42 @@ void handle_event(char* event_name, float event_value, int drop_state,
   int previous_drop_state = current_drop_state;
   current_drop_state = drop_state;
 
-  if (drop_state == PRE_DROP) {
-    if (previous_drop_state != PRE_DROP) {
-      // Wipe the slate when switching to PRE_DROP
-      setAllColor(black);
-    }
-    return;
+  if (strcmp(event_name, "kick") == 0) {
+    strand_values[STRAND_A] = 255;
+    analogWrite(STRAND_A, strand_values[STRAND_A]);
   }
 
-  for (int i = 0; i < SIZE(event_names); i++) {
-    if (strcmp(event_names[i], event_name) == 0) {
-      uint32_t color = led_values[i];
-
-      if (current_drop_state == DROP) {
-        if (strcmp("wobble", event_name) == 0) {
-          color = fade_color(color, event_value);
-          setAllColor(color, STROBE_NTH);
-        }
-      } else {
-        if (strcmp("chord", event_name) == 0) {
-          int n = ((int) (event_value * 75));
-          setNthColor(color, n);
-        } else {
-          setAllColor(color);
-        }
-      }
-    }
-  }
 }
 
 
 
+/**** SPARKFUN ESCUDO-DOS EL WIRE SHIELD ****/
 
-/**** NEOPIXEL ****/
-
-void setupNeoPixel() {
-  define_palettes();
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-
-  uint32_t* palette = palette_1;
-
-  led_values[CONTROL] = palette[CONTROL];
-  led_values[KICK]    = palette[KICK]; // Purple
-  led_values[SNARE]   = palette[SNARE]; // Yellow
-  led_values[WOBBLE]  = palette[WOBBLE];
-  led_values[CHORD]   = palette[CHORD];
-  led_values[SIREN]   = palette[SIREN];
+void setupEscudo() {
+  pinMode(STRAND_A, OUTPUT);
+  strand_values[STRAND_A] = 0;
+  // pinMode(STRAND_E, OUTPUT);
+  // pinMode(STRAND_F, OUTPUT);
+  // pinMode(STRAND_G, OUTPUT);
+  // pinMode(STRAND_H, OUTPUT);
 }
-
-uint32_t fade_color(uint32_t color, float fade) {
-  uint8_t r, g, b;
-
-  r = (color >> 16);
-  g = (color >> 8);
-  b = color;
-
-  r *= fade;
-  g *= fade;
-  b *= fade;
-
-  return strip.Color(r, g, b);
-}
-
-
-// Fill the dots one after the other with a color
-void setAllColor(uint32_t c) {
-  setAllColor(c, 99999999);
-}
-
-
-// Fill the dots one after the other with a color, except every nth pixel.
-void setAllColor(uint32_t c, int except) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    if (!((i+1) % except == 0)) {
-      strip.setPixelColor(i, c);
-    }
-  }
-}
-
-// Fill the dots one after the other with a color, but only every nth pixel.
-void setNthColor(uint32_t c, int only) {
-  for(uint16_t i=(only - 1); i<strip.numPixels(); i += only) {
-    strip.setPixelColor(i, c);
-  }
-}
-
 
 void repaintLights() {
-  // Different drop-state animation loops
-  if (current_drop_state == DROP) {
-    strobe_random_pixel();
-  }
-  else if (current_drop_state == PRE_DROP) {
-    for (int i = 0; i < strip.numPixels(); i += 30) {
-      strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
-    }
-    fade_all_pixels();
-  }
-  else if (current_drop_state == AMBIENT ||
-           current_drop_state == BUILD ||
-           current_drop_state == DROP_ZONE) {
-    fade_all_pixels();
-  }
-
-  strip.show();
+  fadeStrand(STRAND_A);
+  // fadeStrand(STRAND_E);
+  // fadeStrand(STRAND_F);
+  // fadeStrand(STRAND_G);
+  // fadeStrand(STRAND_H);
 }
 
-void fade_all_pixels() {
-  // Fade out all values
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    color = strip.getPixelColor(i);
-    strip.setPixelColor(i, fade_color(color, 0.9));
-  }
+// Kinda fades the strand in a flickery way. The Escudo doesn't support
+// full fading since it used to wear out the boards. This still achieves
+// the effect though.
+void fadeStrand(int strand_pin) {
+  strand_values[strand_pin] = strand_values[strand_pin] * 0.98;
+  analogWrite(strand_pin, strand_values[strand_pin]);
 }
 
-/**
-  Strobes a random Nth pixel for the DROP effect.
-*/
-uint32_t strobe_color = white;
-unsigned long strobe_pixel;
-void strobe_random_pixel() {
-  if (loop_count % 64 == 0) {
-    // Choose pixel to strobe
-    strobe_pixel = (random(strip.numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
-  }
-  if (loop_count % 48 < 16) {
-    // Enable strobing for 16 loops
-    strobe_switch = 1;
-  }
-  else {
-    // Disable strobing for 32 loops
-    strobe_switch = 0;
-    // Wipe any strobes
-    setNthColor(black, STROBE_NTH);
-  }
-
-  if (strobe_switch && loop_count % 4 == 0) {
-    if (strobe_color == white) {
-      strobe_color = black;
-    } else {
-      strobe_color = white;
-    }
-    strip.setPixelColor(strobe_pixel, strobe_color);
-  }
-}
 
 
 /**** DROPSHIP EVENT HANDLING ****/
