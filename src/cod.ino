@@ -85,18 +85,18 @@ uint32_t led_values[6];
 int current_drop_state = AMBIENT;
 
 unsigned long previousMillis = millis();
-long interval = 10; // Refresh every 10ms.
-
-
 
 
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 #define NEOPIXEL_PIN 6
+
+#define LED_REFRESH 10
 #define STROBE_NTH 10
+#define STRIP_1_LENGTH 150
 
 // Initialize neopixel
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIP_1_LENGTH, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
 uint32_t red   = strip.Color(255, 0, 0);
@@ -134,25 +134,31 @@ void setup(void) {
 }
 
 
-unsigned long loop_count = 0;
+uint16_t loop_count = 0;
 int strobe_switch = 0;
 uint32_t color;
+uint16_t handled_events = 0;
+
+unsigned long currentMillis;
+
 
 void loop(void) {
   int rcvlen;
-  unsigned long currentMillis = millis();
+  currentMillis = millis();
 
-  if (currentMillis - previousMillis > interval) {
+  // Repain lights every LED_REFRESH milliseconds
+  if (should_repaint()) {
     previousMillis = currentMillis;
     loop_count += 1;
 
-    if (loop_count % 100 == 0) {
-      Serial.print(F("Alive for "));
-      Serial.print(loop_count);
-      Serial.println(F(" loops"));
+    if (loop_count % (100 / LED_REFRESH) == 0) {
+      Serial.print(loop_count / (100 / LED_REFRESH));
+      Serial.print(" : ");
+      Serial.print(handled_events);
+      Serial.println(" events");
+      handled_events = 0;
     }
 
-    // change lighting state every [interval] milliseconds
     repaintLights();
   }
 
@@ -165,47 +171,8 @@ void loop(void) {
   }
 }
 
-
-
-
-/***
- * This function is called whenever an event is received.
- *
- * CUSTOMIZE LIGHTING RESPONSE TO EVENTS BY REWRITING THIS FUNCTION.
- ***/
-void handle_event(char* event_name, float event_value, int drop_state,
-                  float build, float lcrank, float rcrank) {
-  int previous_drop_state = current_drop_state;
-  current_drop_state = drop_state;
-
-  if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
-    // Wipe the slate when switching to PRE_DROP
-    setAllColor(black);
-  }
-
-  if (strcmp(event_name, "nop") == 0) {
-    return;
-  }
-
-  for (int i = 0; i < SIZE(event_names); i++) {
-    if (strcmp(event_names[i], event_name) == 0) {
-      uint32_t color = led_values[i];
-
-      if (current_drop_state == DROP) {
-        if (strcmp("wobble", event_name) == 0) {
-          color = fade_color(color, event_value);
-          setAllColor(color, STROBE_NTH);
-        }
-      } else {
-        if (strcmp("chord", event_name) == 0) {
-          int n = ((int) (event_value * 75));
-          setNthColor(color, n);
-        } else {
-          setAllColor(color);
-        }
-      }
-    }
-  }
+int should_repaint() {
+  return (currentMillis - previousMillis > LED_REFRESH);
 }
 
 
@@ -217,6 +184,7 @@ void setupNeoPixel() {
   define_palettes();
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
+  light_check();
 
   uint32_t* palette = palette_1;
 
@@ -227,6 +195,7 @@ void setupNeoPixel() {
   led_values[CHORD]   = palette[CHORD];
   led_values[SIREN]   = palette[SIREN];
 }
+
 
 uint32_t fade_color(uint32_t color, float fade) {
   uint8_t r, g, b;
@@ -242,6 +211,16 @@ uint32_t fade_color(uint32_t color, float fade) {
   return strip.Color(r, g, b);
 }
 
+// Cycle through all the lights in the strip
+void light_check() {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, white);
+    strip.show();
+    /*delay(1);*/
+    strip.setPixelColor(i, black);
+    strip.show();
+  }
+}
 
 // Fill the dots one after the other with a color
 void setAllColor(uint32_t c) {
@@ -330,14 +309,14 @@ void strobe_random_pixel() {
 
 void parse_events(char* packet) {
   char* message;
+
   int count = 0;
   while ((message = strtok_r(packet, "$", &packet)) != NULL) {
-    count++;
+    /*count++;
     if (count >= 2) {
       Serial.print(count);
       Serial.println(F("x-message"));
-    }
-
+    }*/
     parse_message(message);
   }
 }
@@ -358,6 +337,66 @@ void parse_message(char* message) {
 
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
+
+
+unsigned long last_wobble = millis();
+unsigned long last_nop = millis();
+
+/***
+ * This function is called whenever an event is received.
+ *
+ * CUSTOMIZE LIGHTING RESPONSE TO EVENTS BY REWRITING THIS FUNCTION.
+ ***/
+void handle_event(char* event_name, float event_value, int drop_state,
+                  float build, float lcrank, float rcrank) {
+  unsigned long now = millis();
+  int previous_drop_state = current_drop_state;
+  current_drop_state = drop_state;
+
+  handled_events += 1;
+
+  if (strcmp(event_name, "nop") == 0) { return; }
+
+  /*if (strcmp(event_name, "wobble") == 0) {
+    if (now < (last_wobble + 10)) {
+      return;
+    } else {
+      last_wobble = now;
+    }
+  }*/
+
+  if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
+    // Wipe the slate when switching to PRE_DROP
+    setAllColor(black);
+  }
+
+  for (int i = 0; i < SIZE(event_names); i++) {
+    if (strcmp(event_names[i], event_name) == 0) {
+      uint32_t color = led_values[i];
+
+      if (current_drop_state == DROP) {
+        // DROP state: wobble and strobe
+        if (strcmp("wobble", event_name) == 0) {
+          // if (should_repaint()) { // only call when a repaint is needed
+            color = fade_color(color, event_value);
+            // on DROP this can get called every 1ms which causes a hang
+            setAllColor(color, STROBE_NTH);
+          // }
+        }
+      } else {
+        // non-DROP state: paint chords, kicks and snares
+        if (strcmp("chord", event_name) == 0) {
+          int n = ((int) (event_value * 75));
+          setNthColor(color, n);
+        } else {
+          setAllColor(color);
+        }
+      }
+    }
+  }
+}
+
+
 
 
 
