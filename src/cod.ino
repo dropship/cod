@@ -162,6 +162,16 @@ void loop(void) {
     repaintLights();
   }
 
+  receive_events();
+}
+
+int should_repaint() {
+  return (currentMillis - previousMillis > LED_REFRESH);
+}
+
+void receive_events() {
+  int rcvlen;
+
   // Receive events
   rcvlen = recvfrom(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0, &from, &fromlen);
 
@@ -358,12 +368,14 @@ void handle_event(char* event_name, float event_value, int drop_state,
   if (strcmp(event_name, "nop") == 0) { return; }
 
   /*if (strcmp(event_name, "wobble") == 0) {
+  if (strcmp(event_name, "wobble") == 0) {
     if (now < (last_wobble + 10)) {
       return;
     } else {
       last_wobble = now;
     }
   }*/
+  }
 
   if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
     // Wipe the slate when switching to PRE_DROP
