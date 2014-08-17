@@ -30,7 +30,9 @@ class DropSim
   end
 
   def drop(&block)
-    instance_eval &block
+    while 1 do
+      instance_eval &block
+    end
   end
 
   def state(state)
