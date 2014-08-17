@@ -19,8 +19,6 @@
 #include "config.h"
 
 
-
-
 /**** ADAFRUIT CC3000 CONFIG ****/
 
 // These are the interrupt and control pins
@@ -37,6 +35,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(
   ADAFRUIT_CC3000_IRQ,
   ADAFRUIT_CC3000_VBAT,
   SPI_CLOCK_DIVIDER); // you can change this clock speed
+
 
 
 
@@ -84,7 +83,7 @@ uint32_t led_values[6];
 #define DROP       4
 int current_drop_state = AMBIENT;
 
-unsigned long previousMillis = millis();
+unsigned long last_painted = millis();
 
 
 /**** NEOPIXEL CONFIG *****/
@@ -118,9 +117,7 @@ void define_palettes() {
 
 void setup(void) {
   Serial.begin(115200);
-  Serial.println(F("Hello, CC3000!"));
   setupNetworking();
-  Serial.print("Hello!");
 
   // Setup event lookup structures
   event_names[CONTROL] = "nop";
@@ -138,16 +135,15 @@ uint16_t loop_count = 0;
 int strobe_switch = 0;
 uint32_t color;
 uint16_t handled_events = 0;
-
-unsigned long currentMillis;
-
+uint16_t received_events = 0;
+unsigned long now;
 
 void loop(void) {
-  currentMillis = millis();
+  now = millis();
 
   // Repain lights every LED_REFRESH milliseconds
   if (should_repaint()) {
-    previousMillis = currentMillis;
+    last_painted = now;
     loop_count += 1;
 
     if (loop_count % (100 / LED_REFRESH) == 0) {
@@ -164,8 +160,8 @@ void loop(void) {
   receive_events();
 }
 
-int should_repaint() {
-  return (currentMillis - previousMillis > LED_REFRESH);
+int should_repaint(void) {
+  return (now - last_painted > LED_REFRESH);
 }
 
 void receive_events() {
