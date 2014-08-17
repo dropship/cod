@@ -357,8 +357,12 @@ void handle_event(char* event_name, float event_value, int drop_state,
 
   if (strcmp(event_name, "nop") == 0) { return; }
 
-  if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
-    // Wipe the slate when switching to PRE_DROP
+  // Test control event
+  if (strcmp(event_name, "control") == 0) {
+    light_check();
+    return;
+  }
+
     setAllColor(black);
   }
 
