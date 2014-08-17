@@ -341,9 +341,6 @@ void parse_message(char* message) {
 }
 
 
-unsigned long last_wobble = millis();
-unsigned long last_nop = millis();
-
 /***
  * This function is called whenever an event is received.
  *
@@ -358,14 +355,6 @@ void handle_event(char* event_name, float event_value, int drop_state,
   handled_events += 1;
 
   if (strcmp(event_name, "nop") == 0) { return; }
-
-  if (strcmp(event_name, "wobble") == 0) {
-    if (now < (last_wobble + 10)) {
-      return;
-    } else {
-      last_wobble = now;
-    }
-  }
 
   if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
     // Wipe the slate when switching to PRE_DROP
@@ -435,6 +424,7 @@ uint32_t getIPAddress(void) {
 
 void setupNetworking(void) {
   long optvalue_block = SOCK_ON;
+  Serial.println("Setting up networking...");
 
   Serial.print("Free RAM: "); Serial.println(getFreeRam(), DEC);
 
