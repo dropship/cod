@@ -358,14 +358,12 @@ void handle_event(char* event_name, float event_value, int drop_state,
 
   if (strcmp(event_name, "nop") == 0) { return; }
 
-  /*if (strcmp(event_name, "wobble") == 0) {
   if (strcmp(event_name, "wobble") == 0) {
     if (now < (last_wobble + 10)) {
       return;
     } else {
       last_wobble = now;
     }
-  }*/
   }
 
   if (drop_state == PRE_DROP && previous_drop_state != PRE_DROP) {
