@@ -169,7 +169,6 @@ int should_repaint(void) {
 
 void receive_events(void) {
   // Receive events
-  /*int rcvlen = recvfrom(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0, &from, &fromlen);*/
   int rcvlen = recv(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0);
 
   if (rcvlen > 0) {
