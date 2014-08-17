@@ -254,7 +254,7 @@ void repaintLights() {
     strobe_random_pixel();
   }
   else if (current_drop_state == PRE_DROP) {
-    for (int i = 0; i < strip.numPixels(); i += 30) {
+    for (int i = 0; i < strip.numPixels(); i += 50) {
       strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
     }
     fade_all_pixels();
