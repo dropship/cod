@@ -149,9 +149,12 @@ void loop(void) {
     if (loop_count % (100 / LED_REFRESH) == 0) {
       Serial.print(loop_count / (100 / LED_REFRESH));
       Serial.print(" : ");
+      Serial.print(received_events);
+      Serial.print(" : ");
       Serial.print(handled_events);
       Serial.println(" events");
       handled_events = 0;
+      received_events = 0;
     }
 
     repaintLights();
@@ -164,11 +167,13 @@ int should_repaint(void) {
   return (now - last_painted > LED_REFRESH);
 }
 
-void receive_events() {
+void receive_events(void) {
   // Receive events
-  int rcvlen = recvfrom(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0, &from, &fromlen);
+  /*int rcvlen = recvfrom(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0, &from, &fromlen);*/
+  int rcvlen = recv(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0);
 
   if (rcvlen > 0) {
+    received_events += 1;
     parse_events(rx_packet_buffer);
     memset(rx_packet_buffer, 0, CC3000_BUFFER_SIZE);
   }
