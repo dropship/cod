@@ -379,11 +379,9 @@ void handle_event(char* event_name, float event_value, int drop_state,
       if (current_drop_state == DROP) {
         // DROP state: wobble and strobe
         if (strcmp("wobble", event_name) == 0) {
-          // if (should_repaint()) { // only call when a repaint is needed
-            color = fade_color(color, event_value);
-            // on DROP this can get called every 1ms which causes a hang
-            setAllColor(color, STROBE_NTH);
-          // }
+          color = fade_color(color, event_value);
+          // on DROP this can get called every 1ms which causes a hang
+          setAllColor(color, STROBE_NTH);
         }
       } else {
         // non-DROP state: paint chords, kicks and snares
