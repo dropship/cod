@@ -143,7 +143,6 @@ unsigned long currentMillis;
 
 
 void loop(void) {
-  int rcvlen;
   currentMillis = millis();
 
   // Repain lights every LED_REFRESH milliseconds
