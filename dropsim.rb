@@ -89,7 +89,9 @@ class DropSim
   end
 end
 
-s = DropSim.new "10.0.1.130", 9000, 1.0
+pause = (ARGV[0] || 1).to_f
+
+s = DropSim.new 9000, pause
 
 s.drop do
   # AMBIENT
