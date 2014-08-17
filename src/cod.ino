@@ -178,12 +178,6 @@ void receive_events() {
   }
 }
 
-int should_repaint() {
-  return (currentMillis - previousMillis > LED_REFRESH);
-}
-
-
-
 
 /**** NEOPIXEL ****/
 
