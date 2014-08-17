@@ -355,6 +355,7 @@ void handle_event(char* event_name, float event_value, int drop_state,
 
   handled_events += 1;
 
+  // Ignore nops
   if (strcmp(event_name, "nop") == 0) { return; }
 
   // Test control event
@@ -363,6 +364,9 @@ void handle_event(char* event_name, float event_value, int drop_state,
     return;
   }
 
+  // Wipe the slate when switching to PRE_DROP
+  if ((drop_state == PRE_DROP && previous_drop_state != PRE_DROP) ||
+      (drop_state == DROP && previous_drop_state != DROP)) {
     setAllColor(black);
   }
 
