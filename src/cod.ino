@@ -102,7 +102,7 @@ uint32_t red   = strip.Color(255, 0, 0);
 uint32_t palette_1[5];
 
 void define_palettes() {
-  palette_1[CONTROL] = white;
+  palette_1[CONTROL] = strip.Color(164, 123, 230); // Pink
   palette_1[KICK]    = strip.Color(19, 95, 255);
   palette_1[SNARE]   = strip.Color(139, 255, 32);
   palette_1[CHORD]   = strip.Color(255, 0, 255); // Magenta
@@ -120,7 +120,7 @@ void setup(void) {
   setupNetworking();
 
   // Setup event lookup structures
-  event_names[CONTROL] = "nop";
+  event_names[CONTROL] = "control";
   event_names[KICK]    = "kick";
   event_names[SNARE]   = "snare";
   event_names[CHORD]   = "chord";
@@ -183,10 +183,6 @@ void receive_events(void) {
 
 void setupNeoPixel() {
   define_palettes();
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-  light_check();
-
   uint32_t* palette = palette_1;
 
   led_values[CONTROL] = palette[CONTROL];
@@ -195,6 +191,10 @@ void setupNeoPixel() {
   led_values[WOBBLE]  = palette[WOBBLE];
   led_values[CHORD]   = palette[CHORD];
   led_values[SIREN]   = palette[SIREN];
+
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  light_check();
 }
 
 
@@ -214,12 +214,14 @@ uint32_t fade_color(uint32_t color, float fade) {
 
 // Cycle through all the lights in the strip
 void light_check() {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, white);
+  int pixels = strip.numPixels();
+
+  for(uint16_t i=0; i<strip.numPixels(); i+=1) {
+    strip.setPixelColor(i, led_values[CONTROL]);
+    strip.setPixelColor(pixels - i, led_values[CONTROL]);
     strip.show();
-    /*delay(1);*/
     strip.setPixelColor(i, black);
-    strip.show();
+    strip.setPixelColor(pixels - i, black);
   }
 }
 
