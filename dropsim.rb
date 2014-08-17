@@ -14,9 +14,13 @@ class DropSim
     :kick, :snare, :chord, :wobble, :siren, :nop
   ]
 
-  def initialize(ip, port, clock_val)
+  def initialize(port, clock_val)
+    @ip = '<broadcast>'
+    @port = port
+
     @socket = UDPSocket.new
-    @socket.connect(ip, port)
+    @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_BROADCAST, true)
+
     @clock = clock_val
     build 0.0
     value 1.0
@@ -52,10 +56,11 @@ class DropSim
 
   def events(*names)
     names.each do |name|
-      if name.is_a?(Array)
-        name.each { |n| @socket.send build_message(n), 0 }
-      else
-        @socket.send build_message(name), 0
+      name = [name] unless name.is_a?(Array)
+      name.each do |n|
+        message = build_message(n)
+        puts message
+        @socket.send message, 0, @ip, @port
       end
       sleep @clock
     end
