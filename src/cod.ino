@@ -455,6 +455,9 @@ void setupNetworking(void) {
     return;
   }
 
+  displayFirmwareVersion();
+  displayDriverMode();
+
   Serial.print(F("OK.\r\nConnecting to network..."));
   if(!cc3000.connectToAP(WLAN_SSID, WLAN_PASS, WLAN_SECURITY)) {
     Serial.println(F("Failed!"));
@@ -498,4 +501,35 @@ void setupNetworking(void) {
   cc3000.printIPdotsRev(getIPAddress());
   Serial.print(F(":"));
   Serial.print(String(LISTEN_PORT, DEC));
+}
+
+void displayDriverMode(void)
+{
+  #ifdef CC3000_TINY_DRIVER
+    Serial.println(F("CC3000 is configure in 'Tiny' mode"));
+  #else
+    Serial.print(F("RX Buffer : "));
+    Serial.print(CC3000_RX_BUFFER_SIZE);
+    Serial.println(F(" bytes"));
+    Serial.print(F("TX Buffer : "));
+    Serial.print(CC3000_TX_BUFFER_SIZE);
+    Serial.println(F(" bytes"));
+  #endif
+}
+
+void displayFirmwareVersion(void)
+{
+  #ifndef CC3000_TINY_DRIVER
+  uint8_t major, minor;
+
+  if(!cc3000.getFirmwareVersion(&major, &minor))
+  {
+    Serial.println(F("Unable to retrieve the firmware version!\r\n"));
+  }
+  else
+  {
+    Serial.print(F("Firmware V. : "));
+    Serial.print(major); Serial.print(F(".")); Serial.println(minor);
+  }
+  #endif
 }
