@@ -328,9 +328,6 @@ void parse_events(char* packet) {
 void parse_message(char* message) {
   // <SEQ>,<EVENT>,<VALUE>,<DROP_STATE>,<BUILD>,<LCRANK>,<RCRANK>
 
-  /*Serial.print(F("  event:"));*/
-  /*Serial.println(message);*/
-
   char* event_name  = strtok_r(message, ",", &message);
   float event_value = atof(strtok_r(message, ",", &message));
   int   drop_state  = atoi(strtok_r(message, ",", &message));
@@ -384,7 +381,7 @@ void handle_event(char* event_name, float event_value, int drop_state,
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
-          int n = ((int) (event_value * 75));
+          int n = ((int) (event_value * 5));
           setNthColor(color, n);
         } else {
           setAllColor(color);
