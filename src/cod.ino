@@ -88,30 +88,33 @@ unsigned long last_painted = millis();
 
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
-#define NEOPIXEL_PIN 6
 
 #define LED_REFRESH 10
 #define STROBE_NTH 10
-#define STRIP_1_LENGTH 150
+#define STRIPS 4
 
-// Initialize neopixel
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIP_1_LENGTH, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t white = strip.Color(255, 255, 255);
-uint32_t black = strip.Color(0, 0, 0);
-uint32_t red   = strip.Color(255, 0, 0);
-uint32_t palette_1[5];
+Adafruit_NeoPixel strips[STRIPS] = {
+  Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)
+};
+
+uint32_t white, black, red;
+uint32_t palette_1[6];
 
 void define_palettes() {
-  palette_1[CONTROL] = strip.Color(164, 123, 230); // Pink
-  palette_1[KICK]    = strip.Color(19, 95, 255);
-  palette_1[SNARE]   = strip.Color(139, 255, 32);
-  palette_1[CHORD]   = strip.Color(255, 0, 255); // Magenta
-  palette_1[WOBBLE]  = strip.Color(255, 77, 32);
-  palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
+  white = strips[0].Color(255, 255, 255);
+  black = strips[0].Color(0, 0, 0);
+  red   = strips[0].Color(255, 0, 0);
+
+  palette_1[CONTROL] = strips[0].Color(164, 123, 230); // Pink
+  palette_1[KICK]    = strips[0].Color(19, 95, 255);
+  palette_1[SNARE]   = strips[0].Color(139, 255, 32);
+  palette_1[CHORD]   = strips[0].Color(255, 0, 255); // Magenta
+  palette_1[WOBBLE]  = strips[0].Color(255, 77, 32);
+  palette_1[SIREN]   = strips[0].Color(255, 0, 255); // Magenta
 }
-
-
-
 
 /**** MAIN PROGRAM ****/
 
@@ -192,9 +195,18 @@ void setupNeoPixel() {
   led_values[CHORD]   = palette[CHORD];
   led_values[SIREN]   = palette[SIREN];
 
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  for (int s=0; s<STRIPS; s++) {
+    strips[s].begin();
+  }
+
+  show_strips(); // Initialize all pixels to 'off'
   light_check();
+}
+
+void show_strips(void) {
+  for (int s=0; s<STRIPS; s++) {
+    strips[s].show();
+  }
 }
 
 
@@ -209,19 +221,26 @@ uint32_t fade_color(uint32_t color, float fade) {
   g *= fade;
   b *= fade;
 
-  return strip.Color(r, g, b);
+  return strips[0].Color(r, g, b);
 }
 
-// Cycle through all the lights in the strip
+// Cycle through all the lights in the strips
 void light_check() {
-  int pixels = strip.numPixels();
+  for (int s=0; s<STRIPS; s++) {
+    int pixels = strips[s].numPixels();
 
-  for(uint16_t i=0; i<strip.numPixels(); i+=1) {
-    strip.setPixelColor(i, led_values[CONTROL]);
-    strip.setPixelColor(pixels - i, led_values[CONTROL]);
-    strip.show();
-    strip.setPixelColor(i, black);
-    strip.setPixelColor(pixels - i, black);
+    Serial.print("Check strip ");
+    Serial.print(s);
+    Serial.print(" - pixels: ");
+    Serial.println(pixels);
+
+    for (uint16_t i=0; i<pixels; i+=1) {
+      strips[s].setPixelColor(i, led_values[CONTROL]);
+      strips[s].setPixelColor(pixels - i, led_values[CONTROL]);
+      strips[s].show();
+      strips[s].setPixelColor(i, black);
+      strips[s].setPixelColor(pixels - i, black);
+    }
   }
 }
 
@@ -233,17 +252,21 @@ void setAllColor(uint32_t c) {
 
 // Fill the dots one after the other with a color, except every nth pixel.
 void setAllColor(uint32_t c, int except) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    if (!((i+1) % except == 0)) {
-      strip.setPixelColor(i, c);
+  for (int s=0; s<STRIPS; s++) {
+    for(uint16_t i=0; i<strips[s].numPixels(); i++) {
+      if (!((i+1) % except == 0)) {
+        strips[s].setPixelColor(i, c);
+      }
     }
   }
 }
 
 // Fill the dots one after the other with a color, but only every nth pixel.
 void setNthColor(uint32_t c, int only) {
-  for(uint16_t i=(only - 1); i<strip.numPixels(); i += only) {
-    strip.setPixelColor(i, c);
+  for (int s=0; s<STRIPS; s++) {
+    for(uint16_t i=(only - 1); i<strips[s].numPixels(); i += only) {
+      strips[s].setPixelColor(i, c);
+    }
   }
 }
 
@@ -254,8 +277,10 @@ void repaintLights() {
     strobe_random_pixel();
   }
   else if (current_drop_state == PRE_DROP) {
-    for (int i = 0; i < strip.numPixels(); i += 50) {
-      strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
+    for (int s=0; s<STRIPS; s++) {
+      for (int i = 0; i < strips[s].numPixels(); i += 50) {
+        strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), red);
+      }
     }
     fade_all_pixels();
   }
@@ -265,14 +290,16 @@ void repaintLights() {
     fade_all_pixels();
   }
 
-  strip.show();
+  show_strips();
 }
 
 void fade_all_pixels() {
-  // Fade out all values
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    color = strip.getPixelColor(i);
-    strip.setPixelColor(i, fade_color(color, 0.9));
+  for (int s=0; s<STRIPS; s++) {
+    // Fade out all values
+    for(uint16_t i=0; i<strips[s].numPixels(); i++) {
+      color = strips[s].getPixelColor(i);
+      strips[s].setPixelColor(i, fade_color(color, 0.8));
+    }
   }
 }
 
@@ -282,28 +309,30 @@ void fade_all_pixels() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel() {
-  if (loop_count % 64 == 0) {
-    // Choose pixel to strobe
-    strobe_pixel = (random(strip.numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
-  }
-  if (loop_count % 48 < 16) {
-    // Enable strobing for 16 loops
-    strobe_switch = 1;
-  }
-  else {
-    // Disable strobing for 32 loops
-    strobe_switch = 0;
-    // Wipe any strobes
-    setNthColor(black, STROBE_NTH);
-  }
-
-  if (strobe_switch && loop_count % 4 == 0) {
-    if (strobe_color == white) {
-      strobe_color = black;
-    } else {
-      strobe_color = white;
+  for (int s=0; s<STRIPS; s++) {
+    if (loop_count % 64 == 0) {
+      // Choose pixel to strobe
+      strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
     }
-    strip.setPixelColor(strobe_pixel, strobe_color);
+    if (loop_count % 48 < 16) {
+      // Enable strobing for 16 loops
+      strobe_switch = 1;
+    }
+    else {
+      // Disable strobing for 32 loops
+      strobe_switch = 0;
+      // Wipe any strobes
+      setNthColor(black, STROBE_NTH);
+    }
+
+    if (strobe_switch && loop_count % 4 == 0) {
+      if (strobe_color == white) {
+        strobe_color = black;
+      } else {
+        strobe_color = white;
+      }
+      strips[s].setPixelColor(strobe_pixel, strobe_color);
+    }
   }
 }
 
