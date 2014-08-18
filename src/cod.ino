@@ -60,9 +60,6 @@ socklen_t fromlen = 8;
 char rx_packet_buffer[CC3000_BUFFER_SIZE];
 unsigned long recvDataLen;
 
-
-
-
 /**** DROPSHIP PROTOCOL ****/
 
 // Structures for event name lookup
@@ -85,6 +82,9 @@ int current_drop_state = AMBIENT;
 
 unsigned long last_painted = millis();
 
+#define THROB_INTENSITY_MIN 0.02
+#define THROB_INTENSITY_MAX 0.95
+#define THROB_SPEED 0.02
 
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
@@ -99,6 +99,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIP_1_LENGTH, NEOPIXEL_PIN, NEO_GR
 uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
 uint32_t red   = strip.Color(255, 0, 0);
+uint32_t blue  = strip.Color(0, 0, 255);
 uint32_t palette_1[5];
 
 void define_palettes() {
@@ -128,6 +129,7 @@ void setup(void) {
   event_names[SIREN]   = "siren";
 
   setupNeoPixel();
+  reset_throb();
 }
 
 
@@ -137,6 +139,9 @@ uint32_t color;
 uint16_t handled_events = 0;
 uint16_t received_events = 0;
 unsigned long now;
+unsigned long last_received_event = millis();
+float throb_direction;
+float throb_intensity;
 
 void loop(void) {
   now = millis();
@@ -172,6 +177,7 @@ void receive_events(void) {
   int rcvlen = recv(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0);
 
   if (rcvlen > 0) {
+    last_received_event = millis();
     received_events += 1;
     parse_events(rx_packet_buffer);
     memset(rx_packet_buffer, 0, CC3000_BUFFER_SIZE);
@@ -250,19 +256,26 @@ void setNthColor(uint32_t c, int only) {
 
 void repaintLights() {
   // Different drop-state animation loops
-  if (current_drop_state == DROP) {
+
+  if (last_received_event < (now - 5000)) {
     strobe_random_pixel();
-  }
-  else if (current_drop_state == PRE_DROP) {
-    for (int i = 0; i < strip.numPixels(); i += 50) {
-      strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
+    throb_all_pixels(blue);
+  } else {
+    reset_throb();
+    if (current_drop_state == DROP) {
+      strobe_random_pixel();
     }
-    fade_all_pixels();
-  }
-  else if (current_drop_state == AMBIENT ||
-           current_drop_state == BUILD ||
-           current_drop_state == DROP_ZONE) {
-    fade_all_pixels();
+    else if (current_drop_state == PRE_DROP) {
+      for (int i = 0; i < strip.numPixels(); i += 50) {
+        strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
+      }
+      fade_all_pixels();
+    }
+    else if (current_drop_state == AMBIENT ||
+             current_drop_state == BUILD ||
+             current_drop_state == DROP_ZONE) {
+      fade_all_pixels();
+    }
   }
 
   strip.show();
@@ -274,6 +287,21 @@ void fade_all_pixels() {
     color = strip.getPixelColor(i);
     strip.setPixelColor(i, fade_color(color, 0.9));
   }
+}
+
+void throb_all_pixels(uint32_t color) {
+  if (throb_intensity <= THROB_INTENSITY_MIN) {
+    throb_direction = 1.0;
+  } else if (throb_intensity >= THROB_INTENSITY_MAX) {
+    throb_direction = -1.0;
+  }
+  throb_intensity = throb_intensity * (1.0 + THROB_SPEED * throb_direction);
+  setAllColor(fade_color(color, throb_intensity), STROBE_NTH);
+}
+
+void reset_throb() {
+  throb_intensity = THROB_INTENSITY_MIN;
+  throb_direction = 1.0;
 }
 
 /**
