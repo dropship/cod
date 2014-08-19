@@ -88,7 +88,7 @@ unsigned long last_painted = millis();
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
-#define LED_REFRESH 5 
+#define LED_REFRESH 10
 #define STROBE_NTH 10
 #define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
 
@@ -106,7 +106,6 @@ uint16_t loop_count = 0;
 int strobe_switch = 0;
 uint32_t color;
 uint16_t handled_events = 0;
-uint16_t received_events = 0;
 
 unsigned long now, last_received_event;
 float throb_direction, throb_intensity;
@@ -131,23 +130,28 @@ void setup(void) {
   last_received_event = millis();
 }
 
+unsigned long t0, t1, paint_time = 0;
 void loop(void) {
   now = millis();
 
   // Repain lights every LED_REFRESH milliseconds
   if (should_repaint()) {
-    last_painted = now;
     loop_count += 1;
 
-    if (loop_count % (100 / LED_REFRESH) == 0) {
-      Serial.print(loop_count / (100 / LED_REFRESH));
-      Serial.print(" : ");
-      Serial.print(received_events);
+    // Print every 10th repaint
+    if (loop_count % 10 == 0) {
+      Serial.print(loop_count);
+
       Serial.print(" : ");
       Serial.print(handled_events);
-      Serial.println(" events");
+      Serial.print(" events");
+
+      Serial.print(" : ");
+      Serial.print(paint_time / 10);
+      Serial.println("ms avg paint");
+
+      paint_time = 0;
       handled_events = 0;
-      received_events = 0;
     }
 
     repaintLights();
