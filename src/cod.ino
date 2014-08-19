@@ -241,12 +241,12 @@ void light_check(int s) {
   Serial.print(" - pixels: ");
   Serial.println(pixels);
 
-  for (uint16_t i=0; i<pixels; i+=1) {
+  for (uint16_t i=0; i<=pixels; i++) {
     strips[s].setPixelColor(i, led_values[CONTROL]);
-    strips[s].setPixelColor(pixels - i, led_values[CONTROL]);
+    strips[s].setPixelColor(pixels - 1 - i, led_values[CONTROL]);
     strips[s].show();
     strips[s].setPixelColor(i, black);
-    strips[s].setPixelColor(pixels - i, black);
+    strips[s].setPixelColor(pixels - 1 - i, black);
   }
 }
 
