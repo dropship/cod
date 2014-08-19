@@ -310,7 +310,7 @@ void repaintLights() {
     }
   }
 
-  show_strip(repaint_loop_count % SIZE(strips));
+  all_strips(show_strip);
 }
 
 void fade_all_pixels() {
