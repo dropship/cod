@@ -90,13 +90,13 @@ unsigned long last_painted = millis();
 
 #define LED_REFRESH 10
 #define STROBE_NTH 10
-#define STRIPS 4
+#define STRIPS 2
 
 Adafruit_NeoPixel strips[STRIPS] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
-  Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800),
-  Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),
-  Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)
+  Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800)
+  /*Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),*/
+  /*Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)*/
 };
 
 uint32_t white, black, red, blue;
