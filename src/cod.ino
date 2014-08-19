@@ -189,7 +189,6 @@ void receive_events(void) {
 
   if (rcvlen > 0) {
     last_received_event = millis();
-    received_events += 1;
     parse_events(rx_packet_buffer);
     memset(rx_packet_buffer, 0, CC3000_BUFFER_SIZE);
   }
@@ -291,10 +290,7 @@ void setNthColor(uint32_t c, int only, int offset) {
   }
 }
 
-unsigned long repaint_loop_count = 0L;
 void repaintLights() {
-  repaint_loop_count++;
-
   // Different drop-state animation loops
   if (last_received_event < (now - SLEEP_TIMEOUT)) {
     all_strips(strobe_random_pixel);
@@ -418,7 +414,6 @@ void parse_message(char* message) {
  ***/
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
-  unsigned long now = millis();
   int previous_drop_state = current_drop_state;
   current_drop_state = drop_state;
 
