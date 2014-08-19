@@ -90,9 +90,8 @@ unsigned long last_painted = millis();
 
 #define LED_REFRESH 10
 #define STROBE_NTH 10
-#define STRIPS 2
 
-Adafruit_NeoPixel strips[STRIPS] = {
+Adafruit_NeoPixel strips[2] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
   Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800)
   /*Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),*/
@@ -189,6 +188,12 @@ void receive_events(void) {
 
 /**** NEOPIXEL ****/
 
+void all_strips(void (*func)(int)) {
+  for (int s=0; s<SIZE(strips); s++) {
+    (*func)(s);
+  }
+}
+
 void setupNeoPixel() {
   define_palettes();
 
@@ -199,18 +204,17 @@ void setupNeoPixel() {
   led_values[CHORD]    = palette[CHORD];
   led_values[PRE_DROP] = palette[PRE_DROP];
 
-  for (int s=0; s<STRIPS; s++) {
-    strips[s].begin();
-  }
-
-  show_strips(); // Initialize all pixels to 'off'
-  light_check();
+  all_strips(begin_strip);
+  all_strips(show_strip);
+  all_strips(light_check);
 }
 
-void show_strips(void) {
-  for (int s=0; s<STRIPS; s++) {
-    strips[s].show();
-  }
+void begin_strip(int strip) {
+  strips[strip].begin();
+}
+
+void show_strip(int strip) {
+  strips[strip].show();
 }
 
 
@@ -229,22 +233,20 @@ uint32_t fade_color(uint32_t color, float fade) {
 }
 
 // Cycle through all the lights in the strips
-void light_check() {
-  for (int s=0; s<STRIPS; s++) {
-    int pixels = strips[s].numPixels();
+void light_check(int s) {
+  int pixels = strips[s].numPixels();
 
-    Serial.print("Check strip ");
-    Serial.print(s);
-    Serial.print(" - pixels: ");
-    Serial.println(pixels);
+  Serial.print("Check strip ");
+  Serial.print(s);
+  Serial.print(" - pixels: ");
+  Serial.println(pixels);
 
-    for (uint16_t i=0; i<pixels; i+=1) {
-      strips[s].setPixelColor(i, led_values[CONTROL]);
-      strips[s].setPixelColor(pixels - i, led_values[CONTROL]);
-      strips[s].show();
-      strips[s].setPixelColor(i, black);
-      strips[s].setPixelColor(pixels - i, black);
-    }
+  for (uint16_t i=0; i<pixels; i+=1) {
+    strips[s].setPixelColor(i, led_values[CONTROL]);
+    strips[s].setPixelColor(pixels - i, led_values[CONTROL]);
+    strips[s].show();
+    strips[s].setPixelColor(i, black);
+    strips[s].setPixelColor(pixels - i, black);
   }
 }
 
@@ -256,7 +258,7 @@ void setAllColor(uint32_t c) {
 
 // Fill the dots one after the other with a color, except every nth pixel.
 void setAllColor(uint32_t c, int except) {
-  for (int s=0; s<STRIPS; s++) {
+  for (int s=0; s<SIZE(strips); s++) {
     for(uint16_t i=0; i<strips[s].numPixels(); i++) {
       if (!((i+1) % except == 0)) {
         strips[s].setPixelColor(i, c);
@@ -272,7 +274,7 @@ void setNthColor(uint32_t c, int only) {
 
 // Fill the dots one after the other with a color, but only every nth pixel.
 void setNthColor(uint32_t c, int only, int offset) {
-  for (int s=0; s<STRIPS; s++) {
+  for (int s=0; s<SIZE(strips); s++) {
     for(uint16_t i=(only - 1); i<strips[s].numPixels(); i += only) {
       strips[s].setPixelColor(i - offset, c);
     }
@@ -292,7 +294,7 @@ void repaintLights() {
       strobe_random_pixel();
     }
     else if (current_drop_state == PRE_DROP) {
-      for (int s=0; s<STRIPS; s++) {
+      for (int s=0; s<SIZE(strips); s++) {
         for (int i = 0; i < strips[s].numPixels(); i += 50) {
           strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), palette[PRE_DROP]);
         }
@@ -306,11 +308,11 @@ void repaintLights() {
     }
   }
 
-  show_strips();
+  all_strips(show_strip);
 }
 
 void fade_all_pixels() {
-  for (int s=0; s<STRIPS; s++) {
+  for (int s=0; s<SIZE(strips); s++) {
     // Fade out all values
     for(uint16_t i=0; i<strips[s].numPixels(); i++) {
       color = strips[s].getPixelColor(i);
@@ -340,7 +342,7 @@ void reset_throb() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel() {
-  for (int s=0; s<STRIPS; s++) {
+  for (int s=0; s<SIZE(strips); s++) {
     if (loop_count % 64 == 0) {
       // Choose pixel to strobe
       strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
@@ -417,7 +419,7 @@ void handle_event(char* event_name, float event_value, int drop_state,
 
   // Test control event
   if (strcmp(event_name, "control") == 0) {
-    light_check();
+    all_strips(light_check);
     return;
   }
 
