@@ -430,7 +430,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
 
   // Wipe the slate when switching to PRE_DROP or DROP
   if ((drop_state == PRE_DROP && previous_drop_state != PRE_DROP) ||
-      (drop_state == DROP && previous_drop_state != DROP)) {
+      (drop_state == DROP && previous_drop_state != DROP) ||
+      (drop_state == POST_DROP && previous_drop_state != POST_DROP)) {
     setAllColor(black);
     all_strips(show_strip);
   }
