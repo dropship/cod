@@ -64,7 +64,7 @@ unsigned long recvDataLen;
 #define KICK        1
 #define SNARE       2
 #define WOBBLE      3
-#define SIREN       4
+#define PRE_DROP    4
 #define CHORD       5
 char* event_names[6];
 uint32_t led_values[6];
@@ -124,7 +124,6 @@ void setup(void) {
   event_names[SNARE]   = "snare";
   event_names[CHORD]   = "chord";
   event_names[WOBBLE]  = "wobble";
-  event_names[SIREN]   = "siren";
 
   setupNeoPixel();
   reset_throb();
