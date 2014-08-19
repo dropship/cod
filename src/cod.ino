@@ -299,6 +299,7 @@ void repaintLights() {
   else {
     reset_throb();
     if (current_drop_state == DROP) {
+      fade_all_pixels();
       all_strips(strobe_random_pixel);
     }
     else if (current_drop_state == PRE_DROP) {
