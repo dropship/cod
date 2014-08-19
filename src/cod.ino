@@ -88,8 +88,9 @@ unsigned long last_painted = millis();
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
-#define LED_REFRESH 10
+#define LED_REFRESH 5 
 #define STROBE_NTH 10
+#define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
 
 Adafruit_NeoPixel strips[1] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800)
@@ -318,7 +319,7 @@ void fade_all_pixels() {
     // Fade out all values
     for(uint16_t i=0; i<strips[s].numPixels(); i++) {
       color = strips[s].getPixelColor(i);
-      strips[s].setPixelColor(i, fade_color(color, 0.8));
+      strips[s].setPixelColor(i, fade_color(color, ALL_FADE_FACTOR));
     }
   }
 }
