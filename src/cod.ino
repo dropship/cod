@@ -285,13 +285,13 @@ void repaintLights() {
   // Different drop-state animation loops
 
   if (last_received_event < (now - SLEEP_TIMEOUT)) {
-    strobe_random_pixel();
+    all_strips(strobe_random_pixel);
     throb_all_pixels(blue);
   }
   else {
     reset_throb();
     if (current_drop_state == DROP) {
-      strobe_random_pixel();
+      all_strips(strobe_random_pixel);
     }
     else if (current_drop_state == PRE_DROP) {
       for (int s=0; s<SIZE(strips); s++) {
@@ -341,31 +341,29 @@ void reset_throb() {
 */
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
-void strobe_random_pixel() {
-  for (int s=0; s<SIZE(strips); s++) {
-    if (loop_count % 64 == 0) {
-      // Choose pixel to strobe
-      strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
-    }
-    if (loop_count % 48 < 16) {
-      // Enable strobing for 16 loops
-      strobe_switch = 1;
-    }
-    else {
-      // Disable strobing for 32 loops
-      strobe_switch = 0;
-      // Wipe any strobes
-      setNthColor(black, STROBE_NTH);
-    }
+void strobe_random_pixel(int s) {
+  if (loop_count % 64 == 0) {
+    // Choose pixel to strobe
+    strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
+  }
+  if (loop_count % 48 < 16) {
+    // Enable strobing for 16 loops
+    strobe_switch = 1;
+  }
+  else {
+    // Disable strobing for 32 loops
+    strobe_switch = 0;
+    // Wipe any strobes
+    setNthColor(black, STROBE_NTH);
+  }
 
-    if (strobe_switch && loop_count % 4 == 0) {
-      if (strobe_color == white) {
-        strobe_color = black;
-      } else {
-        strobe_color = white;
-      }
-      strips[s].setPixelColor(strobe_pixel, strobe_color);
+  if (strobe_switch && loop_count % 4 == 0) {
+    if (strobe_color == white) {
+      strobe_color = black;
+    } else {
+      strobe_color = white;
     }
+    strips[s].setPixelColor(strobe_pixel, strobe_color);
   }
 }
 
