@@ -154,7 +154,12 @@ void loop(void) {
       handled_events = 0;
     }
 
+    t0 = millis();
     repaintLights();
+    t1 = millis();
+    paint_time += (t1 - t0);
+
+    last_painted = millis();
   }
 
   receive_events();
