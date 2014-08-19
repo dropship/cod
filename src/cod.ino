@@ -26,7 +26,7 @@
 // These can be any two pins
 #define ADAFRUIT_CC3000_VBAT  5
 #define ADAFRUIT_CC3000_CS    10
-#define CC3000_BUFFER_SIZE    256
+#define CC3000_BUFFER_SIZE    512
 
 // Use hardware SPI for the remaining pins
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
@@ -44,10 +44,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(
 
 #define LISTEN_PORT 9000 // where Dropship is broadcsting events
 
-const unsigned long
-  dhcpTimeout     = 60L * 1000L, // Max time to wait for address from DHCP
-  connectTimeout  = 15L * 1000L, // Max time to wait for server connection
-  responseTimeout = 15L * 1000L; // Max time to wait for data from server
+const unsigned long dhcpTimeout = 60L * 1000L; // Max time to wait for address from DHCP
 
 bool connected = false;
 
@@ -60,9 +57,6 @@ socklen_t fromlen = 8;
 char rx_packet_buffer[CC3000_BUFFER_SIZE];
 unsigned long recvDataLen;
 
-
-
-
 /**** DROPSHIP PROTOCOL ****/
 
 // Structures for event name lookup
@@ -70,7 +64,7 @@ unsigned long recvDataLen;
 #define KICK        1
 #define SNARE       2
 #define WOBBLE      3
-#define SIREN       4
+#define PRE_DROP    4
 #define CHORD       5
 char* event_names[6];
 uint32_t led_values[6];
@@ -84,6 +78,11 @@ uint32_t led_values[6];
 int current_drop_state = AMBIENT;
 
 unsigned long last_painted = millis();
+
+#define THROB_INTENSITY_MIN 0.02
+#define THROB_INTENSITY_MAX 0.95
+#define THROB_SPEED 0.02
+#define SLEEP_TIMEOUT 5000
 
 
 /**** NEOPIXEL CONFIG *****/
@@ -100,20 +99,21 @@ Adafruit_NeoPixel strips[STRIPS] = {
   Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)
 };
 
-uint32_t white, black, red;
-uint32_t palette_1[6];
+uint32_t white, black, red, blue;
+uint32_t palette[6];
 
 void define_palettes() {
+  palette[CONTROL]  = strips[0].Color(164, 123, 230); // Pink
+  palette[KICK]     = strips[0].Color(19, 95, 255);
+  palette[SNARE]    = strips[0].Color(139, 255, 32);
+  palette[CHORD]    = strips[0].Color(255, 0, 255); // Magenta
+  palette[WOBBLE]   = strips[0].Color(255, 33, 33);
+  palette[PRE_DROP] = strips[0].Color(164, 123, 230);
+
   white = strips[0].Color(255, 255, 255);
   black = strips[0].Color(0, 0, 0);
   red   = strips[0].Color(255, 0, 0);
-
-  palette_1[CONTROL] = strips[0].Color(164, 123, 230); // Pink
-  palette_1[KICK]    = strips[0].Color(19, 95, 255);
-  palette_1[SNARE]   = strips[0].Color(139, 255, 32);
-  palette_1[CHORD]   = strips[0].Color(255, 0, 255); // Magenta
-  palette_1[WOBBLE]  = strips[0].Color(255, 77, 32);
-  palette_1[SIREN]   = strips[0].Color(255, 0, 255); // Magenta
+  blue  = strips[0].Color(0, 0, 255);
 }
 
 /**** MAIN PROGRAM ****/
@@ -128,9 +128,9 @@ void setup(void) {
   event_names[SNARE]   = "snare";
   event_names[CHORD]   = "chord";
   event_names[WOBBLE]  = "wobble";
-  event_names[SIREN]   = "siren";
 
   setupNeoPixel();
+  reset_throb();
 }
 
 
@@ -140,6 +140,9 @@ uint32_t color;
 uint16_t handled_events = 0;
 uint16_t received_events = 0;
 unsigned long now;
+unsigned long last_received_event = millis();
+float throb_direction;
+float throb_intensity;
 
 void loop(void) {
   now = millis();
@@ -175,6 +178,7 @@ void receive_events(void) {
   int rcvlen = recv(listen_socket, rx_packet_buffer, CC3000_BUFFER_SIZE - 1, 0);
 
   if (rcvlen > 0) {
+    last_received_event = millis();
     received_events += 1;
     parse_events(rx_packet_buffer);
     memset(rx_packet_buffer, 0, CC3000_BUFFER_SIZE);
@@ -186,14 +190,13 @@ void receive_events(void) {
 
 void setupNeoPixel() {
   define_palettes();
-  uint32_t* palette = palette_1;
 
-  led_values[CONTROL] = palette[CONTROL];
-  led_values[KICK]    = palette[KICK]; // Purple
-  led_values[SNARE]   = palette[SNARE]; // Yellow
-  led_values[WOBBLE]  = palette[WOBBLE];
-  led_values[CHORD]   = palette[CHORD];
-  led_values[SIREN]   = palette[SIREN];
+  led_values[CONTROL]  = palette[CONTROL];
+  led_values[KICK]     = palette[KICK]; // Purple
+  led_values[SNARE]    = palette[SNARE]; // Yellow
+  led_values[WOBBLE]   = palette[WOBBLE];
+  led_values[CHORD]    = palette[CHORD];
+  led_values[PRE_DROP] = palette[PRE_DROP];
 
   for (int s=0; s<STRIPS; s++) {
     strips[s].begin();
@@ -263,6 +266,11 @@ void setAllColor(uint32_t c, int except) {
 
 // Fill the dots one after the other with a color, but only every nth pixel.
 void setNthColor(uint32_t c, int only) {
+  setNthColor(c, only, 0);
+}
+
+// Fill the dots one after the other with a color, but only every nth pixel.
+void setNthColor(uint32_t c, int only, int offset) {
   for (int s=0; s<STRIPS; s++) {
     for(uint16_t i=(only - 1); i<strips[s].numPixels(); i += only) {
       strips[s].setPixelColor(i, c);
@@ -270,24 +278,31 @@ void setNthColor(uint32_t c, int only) {
   }
 }
 
-
 void repaintLights() {
   // Different drop-state animation loops
-  if (current_drop_state == DROP) {
+
+  if (last_received_event < (now - SLEEP_TIMEOUT)) {
     strobe_random_pixel();
+    throb_all_pixels(blue);
   }
-  else if (current_drop_state == PRE_DROP) {
-    for (int s=0; s<STRIPS; s++) {
-      for (int i = 0; i < strips[s].numPixels(); i += 50) {
-        strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), red);
-      }
+  else {
+    reset_throb();
+    if (current_drop_state == DROP) {
+      strobe_random_pixel();
     }
-    fade_all_pixels();
-  }
-  else if (current_drop_state == AMBIENT ||
-           current_drop_state == BUILD ||
-           current_drop_state == DROP_ZONE) {
-    fade_all_pixels();
+    else if (current_drop_state == PRE_DROP) {
+      for (int s=0; s<STRIPS; s++) {
+        for (int i = 0; i < strips[s].numPixels(); i += 50) {
+          strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), palette[PRE_DROP]);
+        }
+      }
+      fade_all_pixels();
+    }
+    else if (current_drop_state == AMBIENT ||
+             current_drop_state == BUILD ||
+             current_drop_state == DROP_ZONE) {
+      fade_all_pixels();
+    }
   }
 
   show_strips();
@@ -301,6 +316,21 @@ void fade_all_pixels() {
       strips[s].setPixelColor(i, fade_color(color, 0.8));
     }
   }
+}
+
+void throb_all_pixels(uint32_t color) {
+  if (throb_intensity <= THROB_INTENSITY_MIN) {
+    throb_direction = 1.0;
+  } else if (throb_intensity >= THROB_INTENSITY_MAX) {
+    throb_direction = -1.0;
+  }
+  throb_intensity = throb_intensity * (1.0 + THROB_SPEED * throb_direction);
+  setAllColor(fade_color(color, throb_intensity), STROBE_NTH);
+}
+
+void reset_throb() {
+  throb_intensity = THROB_INTENSITY_MIN;
+  throb_direction = 1.0;
 }
 
 /**
@@ -410,8 +440,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
-          int n = ((int) (event_value * 5));
-          setNthColor(color, n);
+          int n = ((int) (event_value * 10));
+          setNthColor(color, 10, n);
         } else {
           setAllColor(color);
         }
