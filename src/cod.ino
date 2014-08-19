@@ -82,7 +82,7 @@ unsigned long last_painted = millis();
 #define THROB_INTENSITY_MIN 0.02
 #define THROB_INTENSITY_MAX 0.95
 #define THROB_SPEED 0.02
-#define SLEEP_TIMEOUT 5000
+#define SLEEP_TIMEOUT 10000L
 
 
 /**** NEOPIXEL CONFIG *****/
