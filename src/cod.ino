@@ -274,7 +274,7 @@ void setNthColor(uint32_t c, int only) {
 void setNthColor(uint32_t c, int only, int offset) {
   for (int s=0; s<STRIPS; s++) {
     for(uint16_t i=(only - 1); i<strips[s].numPixels(); i += only) {
-      strips[s].setPixelColor(i, c);
+      strips[s].setPixelColor(i - offset, c);
     }
   }
 }
