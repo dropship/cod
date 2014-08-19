@@ -92,11 +92,11 @@ unsigned long last_painted = millis();
 #define STROBE_NTH 10
 #define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
 
-Adafruit_NeoPixel strips[1] = {
-  Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800)
-  /*Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800)*/
-  /*Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),*/
-  /*Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)*/
+Adafruit_NeoPixel strips[4] = {
+  Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)
 };
 
 uint32_t white, black, red, blue;
