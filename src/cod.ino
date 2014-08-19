@@ -102,19 +102,16 @@ Adafruit_NeoPixel strips[STRIPS] = {
 uint32_t white, black, red, blue;
 uint32_t palette[6];
 
-void define_palettes() {
-  palette[CONTROL]  = strips[0].Color(164, 123, 230); // Pink
-  palette[KICK]     = strips[0].Color(19, 95, 255);
-  palette[SNARE]    = strips[0].Color(139, 255, 32);
-  palette[CHORD]    = strips[0].Color(255, 0, 255); // Magenta
-  palette[WOBBLE]   = strips[0].Color(255, 33, 33);
-  palette[PRE_DROP] = strips[0].Color(164, 123, 230);
+uint16_t loop_count = 0;
+int strobe_switch = 0;
+uint32_t color;
+uint16_t handled_events = 0;
+uint16_t received_events = 0;
 
-  white = strips[0].Color(255, 255, 255);
-  black = strips[0].Color(0, 0, 0);
-  red   = strips[0].Color(255, 0, 0);
-  blue  = strips[0].Color(0, 0, 255);
-}
+unsigned long now, last_received_event;
+float throb_direction, throb_intensity;
+
+
 
 /**** MAIN PROGRAM ****/
 
@@ -131,18 +128,8 @@ void setup(void) {
 
   setupNeoPixel();
   reset_throb();
+  last_received_event = millis();
 }
-
-
-uint16_t loop_count = 0;
-int strobe_switch = 0;
-uint32_t color;
-uint16_t handled_events = 0;
-uint16_t received_events = 0;
-unsigned long now;
-unsigned long last_received_event = millis();
-float throb_direction;
-float throb_intensity;
 
 void loop(void) {
   now = millis();
@@ -167,6 +154,20 @@ void loop(void) {
   }
 
   receive_events();
+}
+
+void define_palettes() {
+  white = strips[0].Color(255, 255, 255);
+  black = strips[0].Color(0, 0, 0);
+  red   = strips[0].Color(255, 0, 0);
+  blue  = strips[0].Color(0, 0, 255);
+
+  palette[CONTROL]  = strips[0].Color(164, 33, 33); // Pink
+  palette[KICK]     = strips[0].Color(19, 95, 255);
+  palette[SNARE]    = strips[0].Color(139, 255, 32);
+  palette[CHORD]    = strips[0].Color(255, 0, 255); // Magenta
+  palette[PRE_DROP] = strips[0].Color(164, 33, 33);
+  palette[WOBBLE]   = red;
 }
 
 int should_repaint(void) {
