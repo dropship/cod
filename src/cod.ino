@@ -64,7 +64,7 @@ unsigned long recvDataLen;
 #define KICK        1
 #define SNARE       2
 #define WOBBLE      3
-#define PRE_DROP    4
+#define WASH        4
 #define CHORD       5
 char* event_names[6];
 uint32_t led_values[6];
@@ -91,9 +91,9 @@ unsigned long last_painted = millis();
 #define LED_REFRESH 10
 #define STROBE_NTH 10
 
-Adafruit_NeoPixel strips[2] = {
-  Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
-  Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800)
+Adafruit_NeoPixel strips[1] = {
+  Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800)
+  /*Adafruit_NeoPixel(150, 7, NEO_GRB + NEO_KHZ800)*/
   /*Adafruit_NeoPixel(150, 8, NEO_GRB + NEO_KHZ800),*/
   /*Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)*/
 };
@@ -165,7 +165,7 @@ void define_palettes() {
   palette[KICK]     = strips[0].Color(19, 95, 255);
   palette[SNARE]    = strips[0].Color(139, 255, 32);
   palette[CHORD]    = strips[0].Color(255, 0, 255); // Magenta
-  palette[PRE_DROP] = strips[0].Color(164, 33, 33);
+  palette[WASH]     = strips[0].Color(164, 33, 33);
   palette[WOBBLE]   = red;
 }
 
@@ -202,7 +202,7 @@ void setupNeoPixel() {
   led_values[SNARE]    = palette[SNARE]; // Yellow
   led_values[WOBBLE]   = palette[WOBBLE];
   led_values[CHORD]    = palette[CHORD];
-  led_values[PRE_DROP] = palette[PRE_DROP];
+  led_values[WASH]     = palette[WASH];
 
   all_strips(begin_strip);
   all_strips(show_strip);
@@ -281,9 +281,11 @@ void setNthColor(uint32_t c, int only, int offset) {
   }
 }
 
+unsigned long repaint_loop_count = 0L;
 void repaintLights() {
-  // Different drop-state animation loops
+  repaint_loop_count++;
 
+  // Different drop-state animation loops
   if (last_received_event < (now - SLEEP_TIMEOUT)) {
     all_strips(strobe_random_pixel);
     throb_all_pixels(blue);
@@ -296,7 +298,7 @@ void repaintLights() {
     else if (current_drop_state == PRE_DROP) {
       for (int s=0; s<SIZE(strips); s++) {
         for (int i = 0; i < strips[s].numPixels(); i += 50) {
-          strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), palette[PRE_DROP]);
+          strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), palette[WASH]);
         }
       }
       fade_all_pixels();
@@ -308,7 +310,7 @@ void repaintLights() {
     }
   }
 
-  all_strips(show_strip);
+  show_strip(repaint_loop_count % SIZE(strips));
 }
 
 void fade_all_pixels() {
@@ -421,11 +423,16 @@ void handle_event(char* event_name, float event_value, int drop_state,
     return;
   }
 
-  // Wipe the slate when switching to PRE_DROP
+  // Wipe the slate when switching to PRE_DROP or DROP
   if ((drop_state == PRE_DROP && previous_drop_state != PRE_DROP) ||
       (drop_state == DROP && previous_drop_state != DROP)) {
     setAllColor(black);
+    all_strips(show_strip);
   }
+
+  // Don't respond to events in PRE_DROP
+  if (drop_state == PRE_DROP) return;
+
 
   for (int i = 0; i < SIZE(event_names); i++) {
     if (strcmp(event_names[i], event_name) == 0) {
@@ -435,7 +442,6 @@ void handle_event(char* event_name, float event_value, int drop_state,
         // DROP state: wobble and strobe
         if (strcmp("wobble", event_name) == 0) {
           color = fade_color(color, event_value);
-          // on DROP this can get called every 1ms which causes a hang
           setAllColor(color, STROBE_NTH);
         }
       } else {
