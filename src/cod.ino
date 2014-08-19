@@ -246,11 +246,15 @@ void setAllColor(uint32_t c, int except) {
 
 // Fill the dots one after the other with a color, but only every nth pixel.
 void setNthColor(uint32_t c, int only) {
-  for(uint16_t i=(only - 1); i<strip.numPixels(); i += only) {
-    strip.setPixelColor(i, c);
-  }
+  setNthColor(c, only, 0);
 }
 
+// Fill the dots one after the other with a color, but only every nth pixel.
+void setNthColor(uint32_t c, int only, int offset) {
+  for(uint16_t i=(only - 1); i<strip.numPixels(); i += only) {
+    strip.setPixelColor(i - offset, c);
+  }
+}
 
 void repaintLights() {
   // Different drop-state animation loops
@@ -407,8 +411,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
-          int n = ((int) (event_value * 5));
-          setNthColor(color, n);
+          int n = ((int) (event_value * 10));
+          setNthColor(color, 10, n);
         } else {
           setAllColor(color);
         }
