@@ -97,15 +97,16 @@ uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
 uint32_t red   = strip.Color(255, 0, 0);
 uint32_t blue  = strip.Color(0, 0, 255);
-uint32_t palette_1[5];
+
+uint32_t palette[5];
 
 void define_palettes() {
-  palette_1[CONTROL] = strip.Color(164, 123, 230); // Pink
-  palette_1[KICK]    = strip.Color(19, 95, 255);
-  palette_1[SNARE]   = strip.Color(139, 255, 32);
-  palette_1[CHORD]   = strip.Color(255, 0, 255); // Magenta
-  palette_1[WOBBLE]  = strip.Color(255, 77, 32);
-  palette_1[SIREN]   = strip.Color(255, 0, 255); // Magenta
+  palette[CONTROL]  = strip.Color(164, 123, 230); // Pink
+  palette[KICK]     = strip.Color(19, 95, 255);
+  palette[SNARE]    = strip.Color(139, 255, 32);
+  palette[CHORD]    = strip.Color(255, 0, 255); // Magenta
+  palette[WOBBLE]   = strip.Color(255, 33, 33);
+  palette[PRE_DROP] = strip.Color(164, 123, 230);
 }
 
 
@@ -186,14 +187,13 @@ void receive_events(void) {
 
 void setupNeoPixel() {
   define_palettes();
-  uint32_t* palette = palette_1;
 
-  led_values[CONTROL] = palette[CONTROL];
-  led_values[KICK]    = palette[KICK]; // Purple
-  led_values[SNARE]   = palette[SNARE]; // Yellow
-  led_values[WOBBLE]  = palette[WOBBLE];
-  led_values[CHORD]   = palette[CHORD];
-  led_values[SIREN]   = palette[SIREN];
+  led_values[CONTROL]  = palette[CONTROL];
+  led_values[KICK]     = palette[KICK]; // Purple
+  led_values[SNARE]    = palette[SNARE]; // Yellow
+  led_values[WOBBLE]   = palette[WOBBLE];
+  led_values[CHORD]    = palette[CHORD];
+  led_values[PRE_DROP] = palette[PRE_DROP];
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -264,7 +264,7 @@ void repaintLights() {
     }
     else if (current_drop_state == PRE_DROP) {
       for (int i = 0; i < strip.numPixels(); i += 50) {
-        strip.setPixelColor((i + loop_count) % strip.numPixels(), red);
+        strip.setPixelColor((i + loop_count) % strip.numPixels(), palette[PRE_DROP]);
       }
       fade_all_pixels();
     }
