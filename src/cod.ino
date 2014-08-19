@@ -82,6 +82,8 @@ unsigned long last_painted = millis();
 #define THROB_INTENSITY_MIN 0.02
 #define THROB_INTENSITY_MAX 0.95
 #define THROB_SPEED 0.02
+#define SLEEP_TIMEOUT 5000
+
 
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
@@ -253,7 +255,7 @@ void setNthColor(uint32_t c, int only) {
 void repaintLights() {
   // Different drop-state animation loops
 
-  if (last_received_event < (now - 5000)) {
+  if (last_received_event < (now - SLEEP_TIMEOUT)) {
     strobe_random_pixel();
     throb_all_pixels(blue);
   } else {
