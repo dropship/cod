@@ -44,10 +44,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(
 
 #define LISTEN_PORT 9000 // where Dropship is broadcsting events
 
-const unsigned long
-  dhcpTimeout     = 60L * 1000L, // Max time to wait for address from DHCP
-  connectTimeout  = 15L * 1000L, // Max time to wait for server connection
-  responseTimeout = 15L * 1000L; // Max time to wait for data from server
+const unsigned long dhcpTimeout = 60L * 1000L; // Max time to wait for address from DHCP
 
 bool connected = false;
 
