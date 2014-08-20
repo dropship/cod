@@ -88,7 +88,7 @@ unsigned long last_painted = millis();
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
-#define LED_REFRESH 10
+#define LED_REFRESH 10 // Repainting takes 40ms anyway
 #define STROBE_NTH 10
 #define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
 
