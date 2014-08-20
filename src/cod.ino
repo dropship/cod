@@ -89,7 +89,7 @@ unsigned long last_painted = millis();
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
-#define LED_REFRESH 10 // Repainting takes 40ms anyway
+#define LED_REFRESH 40 // Repainting 4 strips takes ~40ms. Pin it so less strips behaves the same.
 #define STROBE_NTH 10
 #define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
 
@@ -353,22 +353,22 @@ void reset_throb() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel(int s) {
-  if (loop_count % 64 == 0) {
+  if (loop_count % 32 == 0) {
     // Choose pixel to strobe
     strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
   }
-  if (loop_count % 48 < 16) {
-    // Enable strobing for 16 loops
+  if (loop_count % 24 < 8) {
+    // Enable strobing for 8 loops
     strobe_switch = 1;
   }
   else {
-    // Disable strobing for 32 loops
+    // Disable strobing for 16 loops
     strobe_switch = 0;
     // Wipe any strobes
     setNthColor(black, STROBE_NTH);
   }
 
-  if (strobe_switch && loop_count % 4 == 0) {
+  if (strobe_switch && loop_count % 2 == 0) {
     if (strobe_color == white) {
       strobe_color = black;
     } else {
