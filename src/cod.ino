@@ -66,8 +66,9 @@ unsigned long recvDataLen;
 #define WOBBLE      3
 #define WASH        4
 #define CHORD       5
-char* event_names[6];
-uint32_t led_values[6];
+#define EVENT_TYPES 6
+char* event_names[EVENT_TYPES];
+uint32_t led_values[EVENT_TYPES];
 
 #define POST_DROP -1
 #define AMBIENT    0
@@ -298,8 +299,9 @@ void repaintLights() {
   }
   else {
     reset_throb();
+
     if (current_drop_state == DROP) {
-      fade_all_pixels();
+      paint_wobble();
       all_strips(strobe_random_pixel);
     }
     else if (current_drop_state == PRE_DROP) {
@@ -379,16 +381,12 @@ void strobe_random_pixel(int s) {
 
 /**** DROPSHIP EVENT HANDLING ****/
 
+
 void parse_events(char* packet) {
   char* message;
-
   int count = 0;
   while ((message = strtok_r(packet, "$", &packet)) != NULL) {
-    /*count++;
-    if (count >= 2) {
-      Serial.print(count);
-      Serial.println(F("x-message"));
-    }*/
+    count++;
     parse_message(message);
   }
 }
@@ -405,6 +403,12 @@ void parse_message(char* message) {
   float rcrank      = atof(strtok_r(message, ",", &message));
 
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
+}
+
+float last_known_wobble = 0;
+void paint_wobble(void) {
+  uint32_t color = fade_color(led_values[WOBBLE], last_known_wobble);
+  setAllColor(color, STROBE_NTH);
 }
 
 
@@ -444,13 +448,10 @@ void handle_event(char* event_name, float event_value, int drop_state,
   for (int i = 0; i < SIZE(event_names); i++) {
     if (strcmp(event_names[i], event_name) == 0) {
       uint32_t color = led_values[i];
-
       if (current_drop_state == DROP) {
         // DROP state: wobble and strobe
-        if (strcmp("wobble", event_name) == 0) {
-          color = fade_color(color, event_value);
-          setAllColor(color, STROBE_NTH);
-        }
+        // Just store last known wobble_value;
+        float last_known_wobble = event_value;
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
