@@ -353,28 +353,26 @@ void reset_throb() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel(int s) {
-  if (loop_count % 32 == 0) {
+  if (loop_count % 16 == 0) {
     // Choose pixel to strobe
     strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
   }
-  if (loop_count % 24 < 8) {
-    // Enable strobing for 8 loops
+
+  strips[s].setPixelColor(strobe_pixel, black);
+
+  if (loop_count % 12 < 4) {
+    // Enable strobing for 4 loops
     strobe_switch = 1;
   }
   else {
-    // Disable strobing for 16 loops
+    // Disable strobing for 8 loops
     strobe_switch = 0;
     // Wipe any strobes
     setNthColor(black, STROBE_NTH);
   }
 
   if (strobe_switch && loop_count % 2 == 0) {
-    if (strobe_color == white) {
-      strobe_color = black;
-    } else {
-      strobe_color = white;
-    }
-    strips[s].setPixelColor(strobe_pixel, strobe_color);
+    strips[s].setPixelColor(strobe_pixel, white);
   }
 }
 
@@ -458,11 +456,11 @@ void handle_event(char* event_name, float event_value, int drop_state,
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
           // Paint the chord event every 5-20 pixels
-          last_chord_event_value = ((int) (event_value * 15) + 5);
-          Serial.println(last_chord_event_value);
           last_chord_event_ms = millis();
+          last_chord_event_value = ((int) (event_value * 15) + 5);
           setNthColor(color, last_chord_event_value);
         } else {
+           // Reclaim pixels for non-chord events after 1000ms of no chord events
           if (millis() - last_chord_event_ms > 1000) {
             last_chord_event_value = 0;
           }
