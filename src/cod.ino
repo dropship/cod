@@ -264,7 +264,6 @@ void setAllColor(uint32_t c) {
   setAllColor(c, 99999999);
 }
 
-
 // Fill the dots one after the other with a color, except every nth pixel.
 void setAllColor(uint32_t c, int except) {
   for (int s=0; s<SIZE(strips); s++) {
@@ -290,6 +289,7 @@ void setNthColor(uint32_t c, int only, int offset) {
   }
 }
 
+// This is the function that actually repaints all the LEDs.
 void repaintLights() {
   // Different drop-state animation loops
   if (last_received_event < (millis() - SLEEP_TIMEOUT)) {
@@ -333,6 +333,13 @@ void fade_all_pixels() {
   }
 }
 
+float last_known_wobble = 0;
+void paint_wobble(void) {
+  uint32_t color = fade_color(led_values[WOBBLE], last_known_wobble);
+  setAllColor(color, STROBE_NTH);
+}
+
+
 void throb_all_pixels(uint32_t color) {
   if (throb_intensity <= THROB_INTENSITY_MIN) {
     throb_direction = 1.0;
@@ -349,13 +356,21 @@ void reset_throb() {
 }
 
 /**
-  Strobes a random Nth pixel for the DROP effect.
+  Strobes a random Nth pixel. At 40ms REFRESH, we can strobe a pixel on, off,
+  on, off, pause across 16 cycles.  That's 160ms for the strobe effect then a
+  480ms pause. It's okay, wish it were faster.
+
+
+  on     _  _
+  off  _||_||___________
+      0                16
+
 */
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel(int s) {
   if (paint_loop_count % 16 == 0) {
-    // Choose pixel to strobe
+    // Choose a random pixel to strobe
     strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
   }
 
@@ -383,9 +398,7 @@ void strobe_random_pixel(int s) {
 
 void parse_events(char* packet) {
   char* message;
-  int count = 0;
   while ((message = strtok_r(packet, "$", &packet)) != NULL) {
-    count++;
     parse_message(message);
   }
 }
@@ -404,19 +417,12 @@ void parse_message(char* message) {
   handle_event(event_name, event_value, drop_state, build, lcrank, rcrank);
 }
 
-float last_known_wobble = 0;
-void paint_wobble(void) {
-  uint32_t color = fade_color(led_values[WOBBLE], last_known_wobble);
-  setAllColor(color, STROBE_NTH);
-}
-
-
 /***
  * This function is called whenever an event is received.
  *
  * CUSTOMIZE LIGHTING RESPONSE TO EVENTS BY REWRITING THIS FUNCTION.
  ***/
-int last_chord_event_value = 0;
+int chord_event_pixel = 0;
 unsigned long last_chord_event_ms = 0;
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
@@ -450,23 +456,26 @@ void handle_event(char* event_name, float event_value, int drop_state,
     if (strcmp(event_names[i], event_name) == 0) {
       uint32_t color = led_values[i];
       if (current_drop_state == DROP) {
-        // DROP state: wobble and strobe
-        // Just store last known wobble_value;
+        // Just store most recent wobble event_value. We'll paint it once
+        // during the paint loop
         last_known_wobble = event_value;
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
-          // Paint the chord event every 5-20 pixels
+          //
+          // Store which pixel we light up for chord events so we can skip
+          // that pixel when we draw hits and kicks. Paint the chord event
+          // every 5-20 pixels depending on the chord event_value.
+          chord_event_pixel = ((int) (event_value * 15) + 5);
+          setNthColor(color, chord_event_pixel);
           last_chord_event_ms = millis();
-          last_chord_event_value = ((int) (event_value * 15) + 5);
-          setNthColor(color, last_chord_event_value);
         } else {
            // Reclaim pixels for non-chord events after 1000ms of no chord events
           if (millis() - last_chord_event_ms > 1000) {
-            last_chord_event_value = 0;
+            chord_event_pixel = 0;
           }
           // Set the color except the last paint chord event to let them linger
-          setAllColor(color, last_chord_event_value);
+          setAllColor(color, chord_event_pixel);
         }
       }
     }
