@@ -39,23 +39,22 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(
 
 
 
-
 /**** NETWORKING CONFIG ****/
 
 #define LISTEN_PORT 9000 // where Dropship is broadcsting events
 
 const unsigned long dhcpTimeout = 60L * 1000L; // Max time to wait for address from DHCP
 
-bool connected = false;
-
 // UDP Socket variables
 unsigned long listen_socket;
-
-sockaddr from;
 socklen_t fromlen = 8;
 
 char rx_packet_buffer[CC3000_BUFFER_SIZE];
 unsigned long recvDataLen;
+
+
+
+
 
 /**** DROPSHIP PROTOCOL ****/
 
@@ -66,6 +65,7 @@ unsigned long recvDataLen;
 #define WOBBLE      3
 #define WASH        4
 #define CHORD       5
+
 #define EVENT_TYPES 6
 char* event_names[EVENT_TYPES];
 uint32_t led_values[EVENT_TYPES];
@@ -78,7 +78,6 @@ uint32_t led_values[EVENT_TYPES];
 #define DROP       4
 int current_drop_state = AMBIENT;
 
-unsigned long last_painted = millis();
 
 #define THROB_INTENSITY_MIN 0.02
 #define THROB_INTENSITY_MAX 0.95
@@ -86,12 +85,14 @@ unsigned long last_painted = millis();
 #define SLEEP_TIMEOUT 10000L
 
 
+
+
 /**** NEOPIXEL CONFIG *****/
 #define SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
 #define LED_REFRESH 40 // Repainting 4 strips takes ~40ms. Pin it so less strips behaves the same.
-#define STROBE_NTH 10
-#define ALL_FADE_FACTOR 0.5 // Changes with number of LEDs lit.
+#define STROBE_NTH 10  // When strobing, strobe every Nth pixel.
+#define ALL_FADE_FACTOR 0.5 // How quickly to fade all pixels. Change with LED_REFRESH.
 
 Adafruit_NeoPixel strips[4] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
@@ -103,9 +104,10 @@ Adafruit_NeoPixel strips[4] = {
 uint32_t white, black, red, blue;
 uint32_t palette[6];
 
-uint16_t loop_count = 0;
+uint16_t paint_loop_count = 0;
+unsigned long last_paint_at = millis();
+
 int strobe_switch = 0;
-uint32_t color;
 uint16_t handled_events = 0;
 
 unsigned long now, last_received_event;
@@ -137,11 +139,11 @@ void loop(void) {
 
   // Repain lights every LED_REFRESH milliseconds
   if (should_repaint()) {
-    loop_count += 1;
+    paint_loop_count += 1;
 
     // Print every 10th repaint
-    if (loop_count % 10 == 0) {
-      Serial.print(loop_count);
+    if (paint_loop_count % 10 == 0) {
+      Serial.print(paint_loop_count);
 
       Serial.print(" : ");
       Serial.print(handled_events);
@@ -160,7 +162,7 @@ void loop(void) {
     t1 = millis();
     paint_time += (t1 - t0);
 
-    last_painted = millis();
+    last_paint_at = millis();
   }
 
   receive_events();
@@ -181,7 +183,7 @@ void define_palettes() {
 }
 
 int should_repaint(void) {
-  return (now - last_painted > LED_REFRESH);
+  return (now - last_paint_at > LED_REFRESH);
 }
 
 void receive_events(void) {
@@ -307,7 +309,7 @@ void repaintLights() {
     else if (current_drop_state == PRE_DROP) {
       for (int s=0; s<SIZE(strips); s++) {
         for (int i = 0; i < strips[s].numPixels(); i += 50) {
-          strips[s].setPixelColor((i + loop_count) % strips[s].numPixels(), palette[WASH]);
+          strips[s].setPixelColor((i + paint_loop_count) % strips[s].numPixels(), palette[WASH]);
         }
       }
       fade_all_pixels();
@@ -323,6 +325,8 @@ void repaintLights() {
 }
 
 void fade_all_pixels() {
+  uint32_t color;
+
   for (int s=0; s<SIZE(strips); s++) {
     // Fade out all values
     for(uint16_t i=0; i<strips[s].numPixels(); i++) {
@@ -353,14 +357,14 @@ void reset_throb() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel(int s) {
-  if (loop_count % 16 == 0) {
+  if (paint_loop_count % 16 == 0) {
     // Choose pixel to strobe
     strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
   }
 
   strips[s].setPixelColor(strobe_pixel, black);
 
-  if (loop_count % 12 < 4) {
+  if (paint_loop_count % 12 < 4) {
     // Enable strobing for 4 loops
     strobe_switch = 1;
   }
@@ -371,7 +375,7 @@ void strobe_random_pixel(int s) {
     setNthColor(black, STROBE_NTH);
   }
 
-  if (strobe_switch && loop_count % 2 == 0) {
+  if (strobe_switch && paint_loop_count % 2 == 0) {
     strips[s].setPixelColor(strobe_pixel, white);
   }
 }
