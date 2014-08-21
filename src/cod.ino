@@ -418,6 +418,7 @@ void paint_wobble(void) {
  * CUSTOMIZE LIGHTING RESPONSE TO EVENTS BY REWRITING THIS FUNCTION.
  ***/
 int last_chord_event_value = 0;
+unsigned long last_chord_event_ms = 0;
 void handle_event(char* event_name, float event_value, int drop_state,
                   float build, float lcrank, float rcrank) {
   int previous_drop_state = current_drop_state;
@@ -456,9 +457,15 @@ void handle_event(char* event_name, float event_value, int drop_state,
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
-          last_chord_event_value = ((int) (event_value * 20));
+          // Paint the chord event every 5-20 pixels
+          last_chord_event_value = ((int) (event_value * 15) + 5);
+          Serial.println(last_chord_event_value);
+          last_chord_event_ms = millis();
           setNthColor(color, last_chord_event_value);
         } else {
+          if (millis() - last_chord_event_ms > 1000) {
+            last_chord_event_value = 0;
+          }
           // Set the color except the last paint chord event to let them linger
           setAllColor(color, last_chord_event_value);
         }
