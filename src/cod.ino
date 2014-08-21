@@ -110,7 +110,7 @@ unsigned long last_paint_at = millis();
 int strobe_switch = 0;
 uint16_t handled_events = 0;
 
-unsigned long now, last_received_event;
+unsigned long last_received_event;
 float throb_direction, throb_intensity;
 
 
@@ -133,10 +133,8 @@ void setup(void) {
   last_received_event = millis();
 }
 
-unsigned long t0, t1, paint_time = 0;
+unsigned long t0, paint_time = 0;
 void loop(void) {
-  now = millis();
-
   // Repain lights every LED_REFRESH milliseconds
   if (should_repaint()) {
     paint_loop_count += 1;
@@ -159,10 +157,8 @@ void loop(void) {
 
     t0 = millis();
     repaintLights();
-    t1 = millis();
-    paint_time += (t1 - t0);
-
     last_paint_at = millis();
+    paint_time += (last_paint_at - t0);
   }
 
   receive_events();
@@ -178,12 +174,12 @@ void define_palettes() {
   palette[KICK]     = strips[0].Color(19, 95, 255);
   palette[SNARE]    = strips[0].Color(139, 255, 32);
   palette[CHORD]    = strips[0].Color(255, 0, 255); // Magenta
-  palette[WASH]     = strips[0].Color(164, 33, 33);
+  palette[WASH]     = strips[0].Color(164, 33, 33); // Frickin Pink
   palette[WOBBLE]   = red;
 }
 
 int should_repaint(void) {
-  return (now - last_paint_at > LED_REFRESH);
+  return (millis() - last_paint_at > LED_REFRESH);
 }
 
 void receive_events(void) {
@@ -200,6 +196,7 @@ void receive_events(void) {
 
 /**** NEOPIXEL ****/
 
+// Run func(int strip_index) for all strips
 void all_strips(void (*func)(int)) {
   for (int s=0; s<SIZE(strips); s++) {
     (*func)(s);
@@ -295,7 +292,7 @@ void setNthColor(uint32_t c, int only, int offset) {
 
 void repaintLights() {
   // Different drop-state animation loops
-  if (last_received_event < (now - SLEEP_TIMEOUT)) {
+  if (last_received_event < (millis() - SLEEP_TIMEOUT)) {
     all_strips(strobe_random_pixel);
     throb_all_pixels(blue);
   }
