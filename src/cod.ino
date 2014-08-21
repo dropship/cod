@@ -451,7 +451,7 @@ void handle_event(char* event_name, float event_value, int drop_state,
       if (current_drop_state == DROP) {
         // DROP state: wobble and strobe
         // Just store last known wobble_value;
-        float last_known_wobble = event_value;
+        last_known_wobble = event_value;
       } else {
         // non-DROP state: paint chords, kicks and snares
         if (strcmp("chord", event_name) == 0) {
