@@ -92,7 +92,7 @@ int current_drop_state = AMBIENT;
 
 #define LED_REFRESH 40 // Repainting 4 strips takes ~40ms. Pin it so less strips behaves the same.
 #define STROBE_NTH 10  // When strobing, strobe every Nth pixel.
-#define ALL_FADE_FACTOR 0.5 // How quickly to fade all pixels. Change with LED_REFRESH.
+#define ALL_FADE_FACTOR 0.45 // How quickly to fade all pixels. Change with LED_REFRESH.
 
 Adafruit_NeoPixel strips[4] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
