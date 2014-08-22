@@ -93,6 +93,7 @@ int current_drop_state = AMBIENT;
 #define LED_REFRESH 40 // Repainting 4 strips takes ~40ms. Pin it so less strips behaves the same.
 #define STROBE_NTH 10  // When strobing, strobe every Nth pixel.
 #define ALL_FADE_FACTOR 0.45 // How quickly to fade all pixels. Change with LED_REFRESH.
+#define CHORD_OVERWRITE_MS 600 // How quickly to fade all pixels. Change with LED_REFRESH.
 
 Adafruit_NeoPixel strips[4] = {
   Adafruit_NeoPixel(150, 6, NEO_GRB + NEO_KHZ800),
@@ -477,8 +478,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
           setNthColor(color, chord_event_pixel);
           last_chord_event_ms = millis();
         } else {
-           // Reclaim pixels for non-chord events after 1000ms of no chord events
-          if (millis() - last_chord_event_ms > 1000) {
+           // Reclaim pixels for non-chord events after CHORD_OVERWRITE_MS of no chord events
+          if (millis() - last_chord_event_ms > CHORD_OVERWRITE_MS) {
             chord_event_pixel = 0;
           }
           // Set the color except the last paint chord event to let them linger
