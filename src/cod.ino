@@ -304,12 +304,19 @@ void repaintLights() {
       all_strips(strobe_random_pixel);
     }
     else if (current_drop_state == PRE_DROP) {
+      fade_all_pixels();
+
+      int length = 3;
+      int interval = 50;
+      int offset = ((paint_loop_count % (interval / length)) * length);
       for (int s=0; s<SIZE(strips); s++) {
-        for (int i = 0; i < strips[s].numPixels(); i += 50) {
-          strips[s].setPixelColor((i + paint_loop_count) % strips[s].numPixels(), palette[WASH]);
+        // Kind of confusing but this draws a tail length long that every
+        // interval pixels and rotates w times every loop. I don't really know
+        // how it works anymore.  Never enought time!
+        for (int w=0; w < length; w++) {
+          setNthColor(palette[WASH], interval, offset + w);
         }
       }
-      fade_all_pixels();
     }
     else if (current_drop_state == AMBIENT ||
              current_drop_state == BUILD ||
