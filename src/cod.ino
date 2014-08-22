@@ -65,8 +65,9 @@ unsigned long recvDataLen;
 #define WOBBLE      3
 #define WASH        4
 #define CHORD       5
+#define NOTE        6
 
-#define EVENT_TYPES 6
+#define EVENT_TYPES 7
 char* event_names[EVENT_TYPES];
 uint32_t led_values[EVENT_TYPES];
 
@@ -76,6 +77,7 @@ uint32_t led_values[EVENT_TYPES];
 #define DROP_ZONE  2
 #define PRE_DROP   3
 #define DROP       4
+#define DUB        5
 int current_drop_state = AMBIENT;
 
 
@@ -102,12 +104,12 @@ Adafruit_NeoPixel strips[4] = {
   Adafruit_NeoPixel(150, 9, NEO_GRB + NEO_KHZ800)
 };
 
-uint32_t white, black, red, blue;
+uint32_t white, black, red, blue, yellow, green;
 uint32_t palette[6];
 
 uint16_t paint_loop_count = 0;
 unsigned long last_paint_at = millis();
-
+float last_known_wobble = 0;
 int strobe_switch = 0;
 uint16_t handled_events = 0;
 
@@ -128,6 +130,7 @@ void setup(void) {
   event_names[SNARE]   = "snare";
   event_names[CHORD]   = "chord";
   event_names[WOBBLE]  = "wobble";
+  event_names[NOTE]    = "note";
 
   setupNeoPixel();
   reset_throb();
@@ -166,10 +169,12 @@ void loop(void) {
 }
 
 void define_palettes() {
-  white = strips[0].Color(255, 255, 255);
-  black = strips[0].Color(0, 0, 0);
-  red   = strips[0].Color(255, 0, 0);
-  blue  = strips[0].Color(0, 0, 255);
+  white  = strips[0].Color(255, 255, 255);
+  black  = strips[0].Color(0,   0,   0);
+  red    = strips[0].Color(255, 0,   0);
+  blue   = strips[0].Color(0,   0,   255);
+  green  = strips[0].Color(0,   255, 0);
+  yellow = strips[0].Color(255, 255, 0);
 
   palette[CONTROL]  = strips[0].Color(164, 33, 33); // Pink
   palette[KICK]     = strips[0].Color(19, 95, 255);
@@ -301,7 +306,11 @@ void repaintLights() {
     reset_throb();
 
     if (current_drop_state == DROP) {
-      paint_wobble();
+      if (last_known_wobble > 0) {
+        paint_wobble();
+      } else {
+        fade_all_pixels();
+      }
       all_strips(strobe_random_pixel);
     }
     else if (current_drop_state == PRE_DROP) {
@@ -341,10 +350,10 @@ void fade_all_pixels() {
   }
 }
 
-float last_known_wobble = 0;
 void paint_wobble(void) {
   uint32_t color = fade_color(led_values[WOBBLE], last_known_wobble);
   setAllColor(color, STROBE_NTH);
+  last_known_wobble = 0;
 }
 
 
@@ -449,8 +458,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
   }
 
   // Wipe the slate when switching to PRE_DROP or DROP
-  if ((drop_state == PRE_DROP && previous_drop_state != PRE_DROP) ||
-      (drop_state == DROP && previous_drop_state != DROP) ||
+  if ((drop_state == PRE_DROP  && previous_drop_state != PRE_DROP) ||
+      (drop_state == DROP      && previous_drop_state != DROP) ||
       (drop_state == POST_DROP && previous_drop_state != POST_DROP)) {
     setAllColor(black);
     all_strips(show_strip);
@@ -460,9 +469,9 @@ void handle_event(char* event_name, float event_value, int drop_state,
   if (drop_state == PRE_DROP) return;
 
 
+  uint32_t color;
   for (int i = 0; i < SIZE(event_names); i++) {
     if (strcmp(event_names[i], event_name) == 0) {
-      uint32_t color = led_values[i];
       if (current_drop_state == DROP) {
         // Just store most recent wobble event_value. We'll paint it once
         // during the paint loop
@@ -475,15 +484,27 @@ void handle_event(char* event_name, float event_value, int drop_state,
           // that pixel when we draw hits and kicks. Paint the chord event
           // every 5-20 pixels depending on the chord event_value.
           chord_event_pixel = ((int) (event_value * 15) + 5);
-          setNthColor(color, chord_event_pixel);
+          setNthColor(led_values[i], chord_event_pixel);
           last_chord_event_ms = millis();
         } else {
            // Reclaim pixels for non-chord events after CHORD_OVERWRITE_MS of no chord events
           if (millis() - last_chord_event_ms > CHORD_OVERWRITE_MS) {
             chord_event_pixel = 0;
           }
-          // Set the color except the last paint chord event to let them linger
-          setAllColor(color, chord_event_pixel);
+
+          // We're just using NOTE for JAMAICA MODE
+          if (strcmp("note", event_name) == 0) {
+            if (event_value < 0.33) {
+              setAllColor(yellow, chord_event_pixel);
+            } else if (event_value > 0.66) {
+              setAllColor(red, chord_event_pixel);
+            } else {
+              setAllColor(green, chord_event_pixel);
+            }
+          } else {
+            // Set the color except the last paint chord event to let them linger
+            setAllColor(led_values[i], chord_event_pixel);
+          }
         }
       }
     }
