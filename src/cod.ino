@@ -365,8 +365,8 @@ void reset_throb() {
 
 /**
   Strobes a random Nth pixel. At 40ms REFRESH, we can strobe a pixel on, off,
-  on, off, pause across 16 cycles.  That's 160ms for the strobe effect then a
-  480ms pause. It's okay, wish it were faster.
+  on, off for 1 cycle each then pause across 12 cycles for a total of 16 cycles.
+  That's 160ms for the strobe effect then a 480ms pause. It's okay, wish it were faster.
 
 
   on     _  _
