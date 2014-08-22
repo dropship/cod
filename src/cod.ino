@@ -377,7 +377,7 @@ void reset_throb() {
 uint32_t strobe_color = white;
 unsigned long strobe_pixel;
 void strobe_random_pixel(int s) {
-  if (paint_loop_count % 16 == 0) {
+  if (paint_loop_count % 17 == 0) {
     // Choose a random pixel to strobe
     strobe_pixel = (random(strips[s].numPixels() / STROBE_NTH) * STROBE_NTH) - 1;
   }
