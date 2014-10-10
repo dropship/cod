@@ -176,6 +176,10 @@ void handle_event(char* event_name, float event_value, int drop_state,
     strand_values[STRAND_A] = 255;
     analogWrite(STRAND_A, strand_values[STRAND_A]);
   }
+  else if (strcmp(event_name, "snare") == 0) {
+    strand_values[STRAND_E] = 255;
+    analogWrite(STRAND_E, strand_values[STRAND_E]);
+  }
 
 }
 
@@ -186,7 +190,8 @@ void handle_event(char* event_name, float event_value, int drop_state,
 void setupEscudo() {
   pinMode(STRAND_A, OUTPUT);
   strand_values[STRAND_A] = 0;
-  // pinMode(STRAND_E, OUTPUT);
+  pinMode(STRAND_E, OUTPUT);
+  strand_values[STRAND_E] = 0;
   // pinMode(STRAND_F, OUTPUT);
   // pinMode(STRAND_G, OUTPUT);
   // pinMode(STRAND_H, OUTPUT);
@@ -194,7 +199,7 @@ void setupEscudo() {
 
 void repaintLights() {
   fadeStrand(STRAND_A);
-  // fadeStrand(STRAND_E);
+  fadeStrand(STRAND_E);
   // fadeStrand(STRAND_F);
   // fadeStrand(STRAND_G);
   // fadeStrand(STRAND_H);
