@@ -3,6 +3,8 @@
 Consumes dropship events from [5-by-5](dropship/5-by-5) and produces
 lighting effects using NeoPixel lighting strips.
 
+![dropship architecutre](dropship_architecture%20-%20cod.jpg)
+
 ## Using the `ino` compiler
 
 The `ino` compiler allows you to avoid the shit Arduino IDE.
